@@ -1,6 +1,7 @@
 'use server';
 
 import prisma from '@/lib/prisma';
+import type { Barangay } from '@/lib/database.types';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import bcrypt from 'bcryptjs';
@@ -19,7 +20,7 @@ export type SessionUser = {
   email: string;
   username: string;
   role: string;
-  barangay: Barangay;
+  barangay: Barangay | null;
 };
 
 // -----------------
@@ -126,7 +127,20 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     id: user.id,
     email: user.email,
     username: user.username,
-    barangay: user.barangay,
+    barangay: user.barangay
+      ? {
+          id: user.barangay.id,
+          name: user.barangay.name,
+          created_at:
+            (user.barangay as any).created_at ??
+            (user.barangay as any).createdAt ??
+            '',
+          updated_at:
+            (user.barangay as any).updated_at ??
+            (user.barangay as any).updatedAt ??
+            '',
+        }
+      : null,
     role: user.role || 'USER',
   };
 }

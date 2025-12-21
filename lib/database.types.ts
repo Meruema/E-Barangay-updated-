@@ -1,3 +1,10 @@
+// Minimal Barangay type for use in app/actions/auth.ts
+export type Barangay = {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+} | null;
 export type Json =
   | string
   | number

@@ -55,6 +55,17 @@ export async function POST(request: NextRequest) {
       : 'hashed_password_placeholder';
 
     // Create user in database
+    // Find the barangay by name to get its ID
+    const barangayRecord = await prisma.barangay.findUnique({
+      where: { name: barangay },
+      select: { id: true },
+    });
+    if (!barangayRecord) {
+      return NextResponse.json(
+        { error: `Barangay not found: ${barangay}` },
+        { status: 400 },
+      );
+    }
     const newUser = await prisma.user.create({
       data: {
         id: authUserId || randomUUID(),
@@ -62,7 +73,7 @@ export async function POST(request: NextRequest) {
         username,
         password: hashedPassword,
         role: 'USER',
-        barangay: prismaBarangay(barangay as BarangayKey) as Barangay,
+        barangay: { connect: { id: barangayRecord.id } },
         createdAt: new Date(),
         updatedAt: new Date(),
       },
