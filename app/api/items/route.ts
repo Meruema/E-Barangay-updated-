@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth/session';
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
-    const type = searchParams.get('type'); // This is actually processing time, not service/facility
+    const type = searchParams.get('type'); // 'service' or 'facility' for dashboard tabs
     const categoryId = searchParams.get('categoryId');
     const search = searchParams.get('search');
+    const barangayId = searchParams.get('barangayId');
+
+    // Get current session and user
+    const session = await getSession();
+    const currentUser = session?.user;
 
     if (id) {
       const item = await prisma.item.findUnique({
@@ -21,22 +27,35 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Item not found' }, { status: 404 });
       }
 
+      // If admin, restrict to their barangay
+      if (currentUser && currentUser.role === 'ADMIN') {
+        const admin = await prisma.user.findUnique({
+          where: { id: currentUser.id },
+          select: { adminBarangayId: true },
+        });
+        if (
+          item.barangayId &&
+          admin?.adminBarangayId &&
+          item.barangayId !== admin.adminBarangayId
+        ) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+      }
+
       return NextResponse.json(item);
     }
 
     let where: any = {
-      status: 'available', // Filter by available status
+      status: 'available',
     };
-
-    // Note: 'type' in your database stores processing time (e.g., '1-2 days'), not 'service'/'facility'
-    // So we ignore the type parameter for service/facility distinction
-    // If you want to filter by processing time, you can use it here:
-    // if (type && (type === '1-2 days' || type === '2-3 days' || type === 'Same day')) {
-    //   where.type = type
-    // }
 
     if (categoryId) {
       where.categoryId = categoryId;
+    }
+
+    if (type && (type === 'service' || type === 'facility')) {
+      // Filter by category name (case-insensitive)
+      where.category = { name: { equals: type, mode: 'insensitive' } };
     }
 
     if (search) {
@@ -44,6 +63,19 @@ export async function GET(request: NextRequest) {
         { name: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
       ];
+    }
+
+    // If admin, restrict to their barangay
+    if (currentUser && currentUser.role === 'ADMIN') {
+      const admin = await prisma.user.findUnique({
+        where: { id: currentUser.id },
+        select: { adminBarangayId: true },
+      });
+      if (admin?.adminBarangayId) {
+        where.barangayId = admin.adminBarangayId;
+      }
+    } else if (barangayId) {
+      where.barangayId = barangayId;
     }
 
     const items = await prisma.item.findMany({
@@ -69,6 +101,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
+    const currentUser = session?.user;
     const body = await request.json();
     const { category_id, booking_rules, image_url, payment, ...data } = body;
 
@@ -88,6 +122,22 @@ export async function POST(request: NextRequest) {
         // Don't connect to any category
       } else {
         createData.category = { connect: { id: category_id } };
+      }
+    }
+
+    // Lock new item to admin's barangay
+    if (currentUser && currentUser.role === 'ADMIN') {
+      const admin = await prisma.user.findUnique({
+        where: { id: currentUser.id },
+        select: { adminBarangayId: true },
+      });
+      if (admin?.adminBarangayId) {
+        createData.barangay = { connect: { id: admin.adminBarangayId } };
+      } else {
+        return NextResponse.json(
+          { error: 'Admin has no assigned barangay' },
+          { status: 400 },
+        );
       }
     }
 

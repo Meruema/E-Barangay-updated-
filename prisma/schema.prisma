@@ -14,16 +14,29 @@ model User {
   username        String          @unique
   password        String
   email           String          @unique
-  userRole        user_role       @default(resident) @map("role")
-  // ⭐ NEW FIELD — correctly mapped to Supabase enum "barangay"
-  barangay        Barangay
+  role            UserRole        @default(USER)
+  barangayId      String?         @db.Uuid
+  adminBarangayId String?         @db.Uuid
   createdAt       DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   request_actions RequestAction[]
   requests        Request[]
   statistics      Statistics[]
+  barangay        Barangay?       @relation(fields: [barangayId], references: [id])
+  adminBarangay   Barangay?       @relation("AdminBarangay", fields: [adminBarangayId], references: [id])
 
   @@map("users")
+}
+
+model Barangay {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name      String   @unique
+  admins    User[]   @relation("AdminBarangay")
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  items     Item[]
+  @@map("barangays")
 }
 
 model Category {
@@ -41,6 +54,7 @@ model Item {
   name         String
   description  String?
   categoryId   String?      @map("category_id") @db.Uuid
+  barangayId   String?      @db.Uuid
   type         String?
   status       item_status? @default(available)
   imageUrl     String?      @map("image_url")
@@ -49,11 +63,21 @@ model Item {
   createdAt    DateTime?    @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime?    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   category     Category?    @relation(fields: [categoryId], references: [id], onUpdate: NoAction)
+  barangay     Barangay?    @relation(fields: [barangayId], references: [id])
   requests     Request[]
   statistics   Statistics[]
 
   @@index([categoryId], map: "idx_items_category_id")
+  @@index([barangayId], map: "idx_items_barangay_id")
   @@map("items")
+}
+model AuditLog {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String   @db.Uuid
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+  @@map("audit_logs")
 }
 
 model Request {
@@ -118,14 +142,10 @@ enum request_status {
   cancelled
 }
 
-enum user_role {
-  resident
-  staff
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
 }
 
-enum Barangay {
-  Molino_I
-  Molino_II
-  Molino_III
-  Molino_IV
-}

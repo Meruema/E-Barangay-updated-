@@ -36,6 +36,7 @@ import {
 import Footer from '../Footer';
 import { useCategories } from '@/lib/hooks/useItems';
 import { getItems, createItem, updateItem, deleteItem } from '@/lib/api/items';
+import { getCurrentUser } from '@/app/actions/auth';
 import type { ItemWithCategory } from '@/lib/database.types';
 
 interface AdminDirectoryProps {
@@ -101,11 +102,20 @@ export function AdminDirectory({ onNavigate }: AdminDirectoryProps) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // Fetch items
+  // Fetch items, only for admin's barangay
   async function loadItems() {
     setLoading(true);
     try {
-      const all = await getItems();
+      let all = [];
+      const user = await getCurrentUser();
+      let type: 'service' | 'facility' | undefined = undefined;
+      if (activeTab === 'services') type = 'service';
+      if (activeTab === 'facilities') type = 'facility';
+      if (user && user.role === 'ADMIN' && user.barangay && user.barangay.id) {
+        all = await getItems(type, user.barangay.id);
+      } else {
+        all = await getItems(type);
+      }
       setItems(all);
     } catch (err) {
       console.error('Failed to load items', err);
@@ -117,7 +127,8 @@ export function AdminDirectory({ onNavigate }: AdminDirectoryProps) {
 
   useEffect(() => {
     loadItems();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   // Derived filtered list
   const filteredItems = useMemo(() => {
