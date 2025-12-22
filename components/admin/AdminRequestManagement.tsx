@@ -178,242 +178,257 @@ export function AdminRequestManagement({
   }
 
   return (
-    <div className='min-h-screen bg-background'>
-      <Header onNavigate={onNavigate} />
-      <div className='container mx-auto px-4 py-8'>
-        <div className='mb-8'>
-          <h1 className='text-3xl font-bold mb-2'>Request Management</h1>
-          <p className='text-muted-foreground'>
-            Manage and review service requests from residents
-          </p>
-        </div>
-
-        {/* Pending Requests Section */}
-        {pendingRequests.length > 0 && (
+    <div>
+      <div className='min-h-screen bg-background'>
+        <Header onNavigate={onNavigate} />
+        <div className='container mx-auto px-4 py-8'>
           <div className='mb-8'>
-            <h2 className='text-2xl font-semibold mb-4'>
-              Pending Requests ({pendingRequests.length})
-            </h2>
-            <div className='grid gap-4'>
-              {pendingRequests.map((request) => (
-                <Card key={request.id}>
-                  <CardHeader>
-                    <div className='flex justify-between items-start'>
-                      <div>
-                        <CardTitle>
-                          {request.item?.name || 'Unknown Service'}
-                        </CardTitle>
-                        <CardDescription>
-                          Requested by:{' '}
-                          {request.user?.username ||
-                            request.user?.email ||
-                            'Unknown User'}
-                        </CardDescription>
-                      </div>
-                      {getStatusBadge(request.status)}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className='space-y-2'>
-                      <div>
-                        <Label className='text-sm font-medium'>Category:</Label>
-                        <p className='text-sm text-muted-foreground'>
-                          {request.item?.category?.name || 'N/A'}
-                        </p>
-                      </div>
-                      {request.reason && (
-                        <div>
-                          <Label className='text-sm font-medium'>Reason:</Label>
-                          <p className='text-sm text-muted-foreground'>
-                            {request.reason}
-                          </p>
-                        </div>
-                      )}
-                      <div>
-                        <Label className='text-sm font-medium'>
-                          Submitted:
-                        </Label>
-                        <p className='text-sm text-muted-foreground'>
-                          {new Date(request.submittedAt).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className='flex gap-2 mt-4'>
-                        <Button
-                          onClick={() => handleAction(request, 'approve')}
-                          className='bg-green-600 hover:bg-green-700'
-                        >
-                          <CheckCircle className='w-4 h-4 mr-2' />
-                          Approve
-                        </Button>
-                        <Button
-                          onClick={() => handleAction(request, 'reject')}
-                          variant='destructive'
-                        >
-                          <XCircle className='w-4 h-4 mr-2' />
-                          Reject
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <h1 className='text-3xl font-bold mb-2'>Request Management</h1>
+            <p className='text-muted-foreground'>
+              Manage and review service requests from residents
+            </p>
           </div>
-        )}
 
-        {/* Other Requests Section */}
-        {otherRequests.length > 0 && (
-          <div>
-            <h2 className='text-2xl font-semibold mb-4'>
-              All Requests ({otherRequests.length})
-            </h2>
-            <div className='grid gap-4'>
-              {otherRequests.map((request) => (
-                <Card key={request.id}>
-                  <CardHeader>
-                    <div className='flex justify-between items-start'>
-                      <div>
-                        <CardTitle>
-                          {request.item?.name || 'Unknown Service'}
-                        </CardTitle>
-                        <CardDescription>
-                          Requested by:{' '}
-                          {request.user?.username ||
-                            request.user?.email ||
-                            'Unknown User'}
-                        </CardDescription>
-                      </div>
-                      {getStatusBadge(request.status)}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className='space-y-2'>
-                      <div>
-                        <Label className='text-sm font-medium'>Category:</Label>
-                        <p className='text-sm text-muted-foreground'>
-                          {request.item?.category?.name || 'N/A'}
-                        </p>
-                      </div>
-                      {request.reason && (
+          {/* Pending Requests Section */}
+          {pendingRequests.length > 0 && (
+            <div className='mb-8'>
+              <h2 className='text-2xl font-semibold mb-4'>
+                Pending Requests ({pendingRequests.length})
+              </h2>
+              <div className='grid gap-4'>
+                {pendingRequests.map((request) => (
+                  <Card key={request.id}>
+                    <CardHeader>
+                      <div className='flex justify-between items-start'>
                         <div>
-                          <Label className='text-sm font-medium'>Reason:</Label>
-                          <p className='text-sm text-muted-foreground'>
-                            {request.reason}
-                          </p>
+                          <CardTitle>
+                            {request.item?.name || 'Unknown Service'}
+                          </CardTitle>
+                          <CardDescription>
+                            Requested by:{' '}
+                            {request.user?.username ||
+                              request.user?.email ||
+                              'Unknown User'}
+                          </CardDescription>
                         </div>
-                      )}
-                      {request.actions && request.actions.length > 0 && (
+                        {getStatusBadge(request.status)}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className='space-y-2'>
                         <div>
                           <Label className='text-sm font-medium'>
-                            Actions:
+                            Category:
                           </Label>
-                          <div className='mt-2 space-y-1'>
-                            {request.actions.map((action: any, idx: number) => (
-                              <div
-                                key={idx}
-                                className='text-sm text-muted-foreground border-l-2 pl-2'
-                              >
-                                <span className='font-medium'>
-                                  {action.actionType}
-                                </span>
-                                {action.remarks && (
-                                  <span> - {action.remarks}</span>
-                                )}
-                                <span className='text-xs ml-2'>
-                                  (
-                                  {new Date(action.actionDate).toLocaleString()}
-                                  )
-                                </span>
-                              </div>
-                            ))}
-                          </div>
+                          <p className='text-sm text-muted-foreground'>
+                            {request.item?.category?.name || 'N/A'}
+                          </p>
                         </div>
-                      )}
-                      <div>
-                        <Label className='text-sm font-medium'>
-                          Submitted:
-                        </Label>
-                        <p className='text-sm text-muted-foreground'>
-                          {new Date(request.submittedAt).toLocaleString()}
-                        </p>
+                        {request.reason && (
+                          <div>
+                            <Label className='text-sm font-medium'>
+                              Reason:
+                            </Label>
+                            <p className='text-sm text-muted-foreground'>
+                              {request.reason}
+                            </p>
+                          </div>
+                        )}
+                        <div>
+                          <Label className='text-sm font-medium'>
+                            Submitted:
+                          </Label>
+                          <p className='text-sm text-muted-foreground'>
+                            {new Date(request.submittedAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className='flex gap-2 mt-4'>
+                          <Button
+                            onClick={() => handleAction(request, 'approve')}
+                            className='bg-green-600 hover:bg-green-700'
+                          >
+                            <CheckCircle className='w-4 h-4 mr-2' />
+                            Approve
+                          </Button>
+                          <Button
+                            onClick={() => handleAction(request, 'reject')}
+                            variant='destructive'
+                          >
+                            <XCircle className='w-4 h-4 mr-2' />
+                            Reject
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {requests.length === 0 && (
-          <Card>
-            <CardContent className='py-8 text-center text-muted-foreground'>
-              No requests found
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Action Dialog */}
-      <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {actionType === 'approve' ? 'Approve Request' : 'Reject Request'}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedRequest && (
-                <>
-                  {actionType === 'approve'
-                    ? `Approve request for "${
-                        selectedRequest.item?.name || 'Unknown Service'
-                      }"?`
-                    : `Reject request for "${
-                        selectedRequest.item?.name || 'Unknown Service'
-                      }"?`}
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className='space-y-4'>
+          {/* Other Requests Section */}
+          {otherRequests.length > 0 && (
             <div>
-              <Label htmlFor='remarks'>Remarks (Optional)</Label>
-              <Textarea
-                id='remarks'
-                placeholder='Add any remarks or notes...'
-                value={remarks}
-                onChange={(e) => setRemarks(e.target.value)}
-                rows={3}
-              />
+              <h2 className='text-2xl font-semibold mb-4'>
+                All Requests ({otherRequests.length})
+              </h2>
+              <div className='grid gap-4'>
+                {otherRequests.map((request) => (
+                  <Card key={request.id}>
+                    <CardHeader>
+                      <div className='flex justify-between items-start'>
+                        <div>
+                          <CardTitle>
+                            {request.item?.name || 'Unknown Service'}
+                          </CardTitle>
+                          <CardDescription>
+                            Requested by:{' '}
+                            {request.user?.username ||
+                              request.user?.email ||
+                              'Unknown User'}
+                          </CardDescription>
+                        </div>
+                        {getStatusBadge(request.status)}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className='space-y-2'>
+                        <div>
+                          <Label className='text-sm font-medium'>
+                            Category:
+                          </Label>
+                          <p className='text-sm text-muted-foreground'>
+                            {request.item?.category?.name || 'N/A'}
+                          </p>
+                        </div>
+                        {request.reason && (
+                          <div>
+                            <Label className='text-sm font-medium'>
+                              Reason:
+                            </Label>
+                            <p className='text-sm text-muted-foreground'>
+                              {request.reason}
+                            </p>
+                          </div>
+                        )}
+                        {request.actions && request.actions.length > 0 && (
+                          <div>
+                            <Label className='text-sm font-medium'>
+                              Actions:
+                            </Label>
+                            <div className='mt-2 space-y-1'>
+                              {request.actions.map(
+                                (action: any, idx: number) => (
+                                  <div
+                                    key={idx}
+                                    className='text-sm text-muted-foreground border-l-2 pl-2'
+                                  >
+                                    <span className='font-medium'>
+                                      {action.actionType}
+                                    </span>
+                                    {action.remarks && (
+                                      <span> - {action.remarks}</span>
+                                    )}
+                                    <span className='text-xs ml-2'>
+                                      (
+                                      {new Date(
+                                        action.actionDate,
+                                      ).toLocaleString()}
+                                      )
+                                    </span>
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <Label className='text-sm font-medium'>
+                            Submitted:
+                          </Label>
+                          <p className='text-sm text-muted-foreground'>
+                            {new Date(request.submittedAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setActionDialogOpen(false)}
-              disabled={processing}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={submitAction}
-              disabled={processing}
-              className={
-                actionType === 'approve'
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : ''
-              }
-              variant={actionType === 'reject' ? 'destructive' : 'default'}
-            >
-              {processing
-                ? 'Processing...'
-                : actionType === 'approve'
-                ? 'Approve'
-                : 'Reject'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          )}
+
+          {requests.length === 0 && (
+            <Card>
+              <CardContent className='py-8 text-center text-muted-foreground'>
+                No requests found
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Action Dialog */}
+        <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {actionType === 'approve'
+                  ? 'Approve Request'
+                  : 'Reject Request'}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedRequest && (
+                  <>
+                    {actionType === 'approve'
+                      ? `Approve request for "${
+                          selectedRequest.item?.name || 'Unknown Service'
+                        }"?`
+                      : `Reject request for "${
+                          selectedRequest.item?.name || 'Unknown Service'
+                        }"?`}
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <div className='space-y-4'>
+              <div>
+                <Label htmlFor='remarks'>Remarks (Optional)</Label>
+                <Textarea
+                  id='remarks'
+                  placeholder='Add any remarks or notes...'
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant='outline'
+                onClick={() => setActionDialogOpen(false)}
+                disabled={processing}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={submitAction}
+                disabled={processing}
+                className={
+                  actionType === 'approve'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : ''
+                }
+                variant={actionType === 'reject' ? 'destructive' : 'default'}
+              >
+                {processing
+                  ? 'Processing...'
+                  : actionType === 'approve'
+                  ? 'Approve'
+                  : 'Reject'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
       <Footer />
     </div>
