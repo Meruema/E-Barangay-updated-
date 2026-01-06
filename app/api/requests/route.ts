@@ -84,7 +84,9 @@ export async function GET(request: NextRequest) {
         user: {
           select: {
             id: true,
-            username: true,
+            fullName: true,
+            blkLot: true,
+            street: true,
             email: true,
           },
         },

@@ -46,7 +46,7 @@ export function LoginForm({
         // show full-screen loading overlay
         setShowLoadingScreen(true);
 
-        let targetUrl = '/';
+        let targetUrl = '/user'; // Default to user dashboard
         if (result.role === 'SUPER_ADMIN') {
           targetUrl = '/super-admin';
         } else if (result.role === 'ADMIN') {

@@ -28,7 +28,7 @@ import { Clock, CheckCircle, XCircle, Eye, MessageSquare } from 'lucide-react';
 import Footer from '../Footer';
 
 interface AdminRequestManagementProps {
-  onNavigate: (view: 'dashboard' | 'directory' | 'requests') => void;
+  onNavigate: (view: 'dashboard' | 'directory' | 'requests' | 'users') => void;
 }
 
 export function AdminRequestManagement({
@@ -206,7 +206,7 @@ export function AdminRequestManagement({
                           </CardTitle>
                           <CardDescription>
                             Requested by:{' '}
-                            {request.user?.username ||
+                            {request.user?.fullName ||
                               request.user?.email ||
                               'Unknown User'}
                           </CardDescription>

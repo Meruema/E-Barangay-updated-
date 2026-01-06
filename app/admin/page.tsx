@@ -7,6 +7,7 @@ import { AdminDirectory } from '@/components/admin/AdminDirectory';
 import { AdminRequestManagement } from '@/components/admin/AdminRequestManagement';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { canAccessPage } from '@/lib/auth/canAccess';
 
 // Dynamically import to avoid SSR issues
 const AdminDirectoryDynamic = dynamic(
@@ -17,23 +18,37 @@ const AdminDirectoryDynamic = dynamic(
   { ssr: false },
 );
 
-type View = 'dashboard' | 'directory' | 'requests';
+const AdminUsersPage = dynamic(
+  () => import('./users/page').then((mod) => mod.default),
+  { ssr: false },
+);
+
+type View = 'dashboard' | 'directory' | 'requests' | 'users';
 
 export default function AdminPage() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<
+    import('@/lib/auth/canAccess').UserRole | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     if (authLoading) return;
-    // Allow only ADMIN and SUPER_ADMIN roles
-    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN')) {
+    // Use canAccess utility for role-based access
+    if (
+      !canAccessPage(
+        '/admin',
+        user?.role as import('@/lib/auth/canAccess').UserRole,
+      )
+    ) {
       router.push('/');
       return;
     }
-    setUserRole(user.role);
+    if (user) {
+      setUserRole(user.role as import('@/lib/auth/canAccess').UserRole);
+    }
     setLoading(false);
     // Clear post-login flag once auth is loaded
     if (
@@ -74,6 +89,8 @@ export default function AdminPage() {
         return <AdminDirectoryDynamic onNavigate={setCurrentView} />;
       case 'requests':
         return <AdminRequestManagement onNavigate={setCurrentView} />;
+      case 'users':
+        return <AdminUsersPage />;
       default:
         return <MainDashboard onNavigate={setCurrentView} />;
     }

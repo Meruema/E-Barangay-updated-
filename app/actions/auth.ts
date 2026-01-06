@@ -18,7 +18,9 @@ import { randomUUID } from 'crypto';
 export type SessionUser = {
   id: string;
   email: string;
-  username: string;
+  fullName: string;
+  blkLot: string;
+  street: string;
   role: string;
   barangay: Barangay | null;
 };
@@ -29,15 +31,18 @@ export type SessionUser = {
 export async function signUp(
   email: string,
   password: string,
-  username: string,
+  fullName: string,
+  blkLot: string,
+  street: string,
   barangayId: string,
+  idUrl?: string,
+  addressUrl?: string,
 ) {
   const existingUser = await prisma.user.findFirst({
-    where: { OR: [{ email }, { username }] },
+    where: { email },
   });
 
-  if (existingUser)
-    return { error: 'User with this email or username already exists' };
+  if (existingUser) return { error: 'User with this email already exists' };
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -52,17 +57,18 @@ export async function signUp(
       data: {
         id: randomUUID(),
         email,
-        username,
+        fullName,
+        blkLot,
+        street,
         password: hashedPassword,
         role: 'USER',
-        barangayId,
+        barangay: { connect: { id: barangayId } },
         createdAt: new Date(),
         updatedAt: new Date(),
+        idUrl,
+        addressUrl,
       },
     });
-
-    // ✅ Only pass userId to session
-    await createSessionBase(user.id);
 
     revalidatePath('/');
     return { user };
@@ -81,14 +87,19 @@ export async function signIn(email: string, password: string) {
     select: {
       id: true,
       email: true,
-      username: true,
+      fullName: true,
+      blkLot: true,
+      street: true,
       password: true,
       role: true,
       barangay: true,
+      verified: true,
     },
   });
 
   if (!user) return { error: 'Invalid email or password' };
+
+  if (!user.verified) return { error: 'Your account is not verified yet.' };
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) return { error: 'Invalid email or password' };
@@ -115,7 +126,9 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     select: {
       id: true,
       email: true,
-      username: true,
+      fullName: true,
+      blkLot: true,
+      street: true,
       role: true,
       barangay: true,
     },
@@ -126,7 +139,9 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   return {
     id: user.id,
     email: user.email,
-    username: user.username,
+    fullName: user.fullName || '',
+    blkLot: user.blkLot || '',
+    street: user.street || '',
     barangay: user.barangay
       ? {
           id: user.barangay.id,

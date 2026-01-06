@@ -43,7 +43,8 @@ export interface Database {
       users: {
         Row: {
           id: string;
-          username: string;
+          fullName: string;
+          address: string;
           password: string;
           email: string;
           role: 'SUPER_ADMIN' | 'ADMIN' | 'USER';
@@ -53,7 +54,8 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          username: string;
+          fullName: string;
+          address: string;
           password: string;
           email: string;
           role?: 'SUPER_ADMIN' | 'ADMIN' | 'USER';
@@ -63,7 +65,8 @@ export interface Database {
         };
         Update: {
           id?: string;
-          username?: string;
+          fullName?: string;
+          address?: string;
           password?: string;
           email?: string;
           role?: 'SUPER_ADMIN' | 'ADMIN' | 'USER';

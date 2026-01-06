@@ -40,7 +40,7 @@ import { getCurrentUser } from '@/app/actions/auth';
 import type { ItemWithCategory } from '@/lib/database.types';
 
 interface AdminDirectoryProps {
-  onNavigate: (view: 'dashboard' | 'directory' | 'requests') => void;
+  onNavigate: (view: 'dashboard' | 'directory' | 'requests' | 'users') => void;
 }
 
 const CATEGORY_LIST = [

@@ -17,22 +17,17 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const type = formData.get('type') as string | null;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Validate file type
-    const validTypes = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/webp',
-      'image/gif',
-    ];
+    // Only allow PNG and JPG
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     if (!validTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only images are allowed.' },
+        { error: 'Invalid file type. Only PNG and JPG images are allowed.' },
         { status: 400 },
       );
     }
@@ -46,20 +41,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique filename
+    // Generate unique filename and folder
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random()
       .toString(36)
       .substring(7)}.${fileExt}`;
+    let folder = 'other';
+    if (type === 'valid_id') folder = 'valid_id';
+    else if (type === 'proof_of_address') folder = 'proof_of_address';
+
+    const path = `${folder}/${fileName}`;
 
     // Convert file to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload to Supabase storage using admin client (bypasses RLS)
+    // Upload to Supabase storage in 'Documents' bucket
     const { data, error } = await supabaseAdmin.storage
-      .from('facilities-image')
-      .upload(fileName, buffer, {
+      .from('Documents')
+      .upload(path, buffer, {
         contentType: file.type,
         upsert: false,
       });
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     // Get public URL
     const {
       data: { publicUrl },
-    } = supabaseAdmin.storage.from('facilities-image').getPublicUrl(fileName);
+    } = supabaseAdmin.storage.from('Documents').getPublicUrl(path);
 
     return NextResponse.json({
       url: publicUrl,

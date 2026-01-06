@@ -65,8 +65,9 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // If admin, restrict to their barangay
+    // Filter by barangay based on user role
     if (currentUser && currentUser.role === 'ADMIN') {
+      // Admin: restrict to their adminBarangayId
       const admin = await prisma.user.findUnique({
         where: { id: currentUser.id },
         select: { adminBarangayId: true },
@@ -74,7 +75,17 @@ export async function GET(request: NextRequest) {
       if (admin?.adminBarangayId) {
         where.barangayId = admin.adminBarangayId;
       }
+    } else if (currentUser && currentUser.role === 'USER') {
+      // Regular user: restrict to their barangayId
+      const user = await prisma.user.findUnique({
+        where: { id: currentUser.id },
+        select: { barangayId: true },
+      });
+      if (user?.barangayId) {
+        where.barangayId = user.barangayId;
+      }
     } else if (barangayId) {
+      // For non-authenticated requests or other roles, use query param if provided
       where.barangayId = barangayId;
     }
 

@@ -21,13 +21,17 @@ import {
   ColumnDef,
   SortingState,
 } from '@tanstack/react-table';
+import { toast } from 'sonner';
 
 type User = {
   id: string | number;
-  username: string;
+  fullName: string;
+  blkLot?: string;
+  street?: string;
   email?: string;
   role: string;
   barangay?: { name: string } | null;
+  verified?: boolean;
 };
 
 type Role = 'SUPER_ADMIN' | 'ADMIN' | 'USER';
@@ -104,7 +108,9 @@ export default function ManageUsersPage() {
       const s = search.toLowerCase();
       filtered = filtered.filter(
         (u) =>
-          u.username?.toLowerCase().includes(s) ||
+          u.fullName?.toLowerCase().includes(s) ||
+          u.blkLot?.toLowerCase().includes(s) ||
+          u.street?.toLowerCase().includes(s) ||
           u.email?.toLowerCase().includes(s) ||
           u.role?.toLowerCase().includes(s) ||
           (u.barangay?.name?.toLowerCase().includes(s) ?? false),
@@ -124,13 +130,25 @@ export default function ManageUsersPage() {
         cell: ({ row }) => row.index + 1,
       },
       {
-        accessorKey: 'username',
-        header: 'Username',
+        accessorKey: 'fullName',
+        header: 'Full Name',
         cell: (info) => (
           <span className='font-medium text-blue-900'>
             {info.getValue() as string}
           </span>
         ),
+      },
+      {
+        id: 'address',
+        header: 'Address',
+        cell: ({ row }) => {
+          const user = row.original;
+          return (
+            <span className='text-blue-900'>
+              {user.blkLot || ''} {user.street || ''}
+            </span>
+          );
+        },
       },
       {
         accessorKey: 'email',
@@ -214,15 +232,51 @@ export default function ManageUsersPage() {
       {
         id: 'actions',
         header: 'Actions',
-        cell: ({ row }) => (
-          <Button
-            size='sm'
-            className='bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200 hover:text-blue-900 transition'
-            onClick={() => router.push(`/super-admin/users/${row.original.id}`)}
-          >
-            Edit
-          </Button>
-        ),
+        cell: ({ row }) => {
+          const user = row.original;
+          const canVerify = user.role === 'USER' && !user.verified;
+          return (
+            <div className='flex gap-2'>
+              <Button
+                size='sm'
+                className='bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200 hover:text-blue-900 transition'
+                onClick={() => router.push(`/super-admin/users/${user.id}`)}
+              >
+                Edit
+              </Button>
+              {canVerify && (
+                <Button
+                  size='sm'
+                  variant='outline'
+                  className='border-green-400 text-green-700 hover:bg-green-100 hover:text-green-900 transition'
+                  disabled={updating === user.id.toString()}
+                  onClick={async () => {
+                    setUpdating(user.id.toString());
+                    try {
+                      const res = await fetch('/api/users', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: user.id, verified: true }),
+                      });
+                      if (res.ok) {
+                        setUsers((prev) =>
+                          prev.map((u) =>
+                            u.id === user.id ? { ...u, verified: true } : u,
+                          ),
+                        );
+                        toast.success('User verified successfully!');
+                      }
+                    } finally {
+                      setUpdating(null);
+                    }
+                  }}
+                >
+                  Verify
+                </Button>
+              )}
+            </div>
+          );
+        },
       },
     ],
     [router, updating],
@@ -291,7 +345,7 @@ export default function ManageUsersPage() {
               <input
                 type='text'
                 className='w-full border border-blue-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300'
-                placeholder='Search users by username, email, role, or barangay...'
+                placeholder='Search users by name, address, email, role, or barangay...'
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />

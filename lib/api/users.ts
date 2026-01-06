@@ -1,74 +1,64 @@
-import axiosInstance from '@/lib/axios'
+import axiosInstance from '@/lib/axios';
 
 export interface User {
-  id: string
-  username: string
-  email: string
-  roleId?: string | null
-  createdAt: string
-  updatedAt: string
+  id: string;
+  fullName: string;
+  address: string;
+  email: string;
+  roleId?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export async function createUser(
   email: string,
-  username: string,
+  fullName: string,
+  address: string,
   password?: string,
-  authUserId?: string
+  authUserId?: string,
 ): Promise<User> {
   const response = await axiosInstance.post('/users', {
     email,
-    username,
+    fullName,
+    address,
     password,
     authUserId,
-  })
-  return response.data
+  });
+  return response.data;
 }
 
 export async function getUserById(id: string): Promise<User | null> {
   try {
-    const response = await axiosInstance.get(`/users?id=${id}`)
-    return response.data
+    const response = await axiosInstance.get(`/users?id=${id}`);
+    return response.data;
   } catch (error: any) {
     if (error.response?.status === 404) {
-      return null
+      return null;
     }
-    throw error
+    throw error;
   }
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
-    const response = await axiosInstance.get(`/users?email=${email}`)
-    return response.data
+    const response = await axiosInstance.get(`/users?email=${email}`);
+    return response.data;
   } catch (error: any) {
     if (error.response?.status === 404) {
-      return null
+      return null;
     }
-    throw error
-  }
-}
-
-export async function getUserByUsername(username: string): Promise<User | null> {
-  try {
-    const response = await axiosInstance.get(`/users?username=${username}`)
-    return response.data
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      return null
-    }
-    throw error
+    throw error;
   }
 }
 
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    const response = await axiosInstance.get('/users')
-    return response.data
+    const response = await axiosInstance.get('/users');
+    return response.data;
   } catch (error: any) {
     if (error.response?.status === 401 || error.response?.status === 404) {
-      return null
+      return null;
     }
-    throw error
+    throw error;
   }
 }
-

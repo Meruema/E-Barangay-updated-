@@ -21,11 +21,24 @@ const prismaBarangay = (barangay: BarangayKey) => barangayMap[barangay];
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, username, password, authUserId, barangay } = body;
 
-    if (!email || !username || !barangay) {
+    const {
+      email,
+      fullName,
+      blkLot,
+      street,
+      address,
+      password,
+      authUserId,
+      barangay,
+    } = body;
+
+    if (!email || !fullName || !blkLot || !street || !address || !barangay) {
       return NextResponse.json(
-        { error: 'Email, username, and barangay are required' },
+        {
+          error:
+            'Email, full name, blkLot, street, address, and barangay are required',
+        },
         { status: 400 },
       );
     }
@@ -39,12 +52,12 @@ export async function POST(request: NextRequest) {
 
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
-      where: { OR: [{ email }, { username }] },
+      where: { email },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'User with this email or username already exists' },
+        { error: 'User with this email already exists' },
         { status: 409 },
       );
     }
@@ -66,11 +79,14 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
     const newUser = await prisma.user.create({
       data: {
         id: authUserId || randomUUID(),
         email,
-        username,
+        fullName,
+        blkLot,
+        street,
         password: hashedPassword,
         role: 'USER',
         barangay: { connect: { id: barangayRecord.id } },
@@ -94,7 +110,6 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
     const email = searchParams.get('email');
-    const username = searchParams.get('username');
 
     if (id) {
       const user = await prisma.user.findUnique({ where: { id } });
@@ -110,21 +125,25 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.json(user);
     }
-    if (username) {
-      const user = await prisma.user.findUnique({ where: { username } });
-      if (!user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-      return NextResponse.json(user);
-    }
     // Return all users for admin page
+    const barangayId = searchParams.get('barangayId');
+    const where: any = {};
+    if (barangayId) {
+      where.barangayId = barangayId;
+    }
     const users = await prisma.user.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
-        username: true,
+        fullName: true,
+        blkLot: true,
+        street: true,
         email: true,
         role: true,
+        verified: true,
+        idUrl: true,
+        addressUrl: true,
         createdAt: true,
         updatedAt: true,
         barangay: {

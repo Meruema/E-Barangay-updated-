@@ -54,7 +54,10 @@ export async function getSession() {
     select: {
       id: true,
       email: true,
-      username: true,
+      barangay: true,
+      fullName: true,
+      blkLot: true,
+      street: true,
       role: true,
     },
   });
@@ -67,7 +70,10 @@ export async function getSession() {
     user: {
       id: user.id,
       email: user.email,
-      username: user.username,
+      barangay: user.barangay,
+      fullName: user.fullName,
+      blkLot: user.blkLot,
+      street: user.street,
       role: user.role,
     },
   };

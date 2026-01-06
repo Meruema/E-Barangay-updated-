@@ -11,12 +11,17 @@ datasource db {
 
 model User {
   id              String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  username        String          @unique
+  fullName        String          @db.VarChar(50)
+  blkLot          String          @db.VarChar(30)
+  street          String          @db.VarChar(60)
   password        String
   email           String          @unique
   role            UserRole        @default(USER)
   barangayId      String?         @db.Uuid
   adminBarangayId String?         @db.Uuid
+  verified        Boolean         @default(false)
+  idUrl           String?         @db.Text
+  addressUrl      String?         @db.Text
   createdAt       DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   request_actions RequestAction[]
