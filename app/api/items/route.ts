@@ -53,9 +53,20 @@ export async function GET(request: NextRequest) {
       where.categoryId = categoryId;
     }
 
-    if (type && (type === 'service' || type === 'facility')) {
-      // Filter by category name (case-insensitive)
-      where.category = { name: { equals: type, mode: 'insensitive' } };
+    if (type) {
+      if (type === 'service') {
+        // Services are everything where category is NOT "facility"
+        where.NOT = {
+          category: {
+            name: { equals: 'facility', mode: 'insensitive' },
+          },
+        };
+      } else if (type === 'facility') {
+        // Facilities are items where category is "facility"
+        where.category = {
+          name: { equals: 'facility', mode: 'insensitive' },
+        };
+      }
     }
 
     if (search) {

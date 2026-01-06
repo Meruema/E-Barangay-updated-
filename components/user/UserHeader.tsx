@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Landmark, User } from 'lucide-react';
+import { useRouterWithProgress } from '@/lib/hooks/useRouterWithProgress';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { LoginForm } from '@/components/auth/LoginForm';
@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export function Header() {
-  const router = useRouter();
+  const router = useRouterWithProgress();
   const { user, loading } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
   const [signupOpen, setSignupOpen] = useState(false);
@@ -67,7 +67,7 @@ export function Header() {
           {/* Center Navigation */}
           <nav className='flex items-center space-x-8 text-sm font-medium text-gray-700'>
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/user')}
               className='hover:text-blue-600'
             >
               Home

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Header } from './AdminHeader';
+import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
@@ -39,10 +40,6 @@ import { getItems, createItem, updateItem, deleteItem } from '@/lib/api/items';
 import { getCurrentUser } from '@/app/actions/auth';
 import type { ItemWithCategory } from '@/lib/database.types';
 
-interface AdminDirectoryProps {
-  onNavigate: (view: 'dashboard' | 'directory' | 'requests' | 'users') => void;
-}
-
 const CATEGORY_LIST = [
   'transport',
   'facility',
@@ -64,7 +61,7 @@ async function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function AdminDirectory({ onNavigate }: AdminDirectoryProps) {
+export function AdminDirectory() {
   const { categories } = useCategories();
   const [items, setItems] = useState<ItemWithCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -554,22 +551,9 @@ export function AdminDirectory({ onNavigate }: AdminDirectoryProps) {
     return [...base, ...counts];
   }, [items]);
 
-  if (loading) {
-    return (
-      <div className='min-h-screen bg-background'>
-        <Header onNavigate={onNavigate} />
-        <div className='container mx-auto px-4 py-8'>
-          <div className='text-center'>Loading...</div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
   return (
     <div className='min-h-screen bg-background'>
       <div className='min-h-screen bg-gradient-to-b from-blue-50 to-gray-200 p-6 rounded-lg m-5'>
-        <Header onNavigate={onNavigate} />
         <div className='container mx-auto px-4 py-8'>
           <div className='mb-6 flex items-center justify-between'>
             <div>
@@ -601,140 +585,178 @@ export function AdminDirectory({ onNavigate }: AdminDirectoryProps) {
 
             <TabsContent value='services' className='mt-6'>
               <div className='space-y-6'>
-                <div className='flex items-center gap-4'>
-                  <div className='flex-1 relative'>
-                    <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4' />
-                    <Input
-                      type='text'
-                      placeholder='Search items...'
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className='pl-10'
-                    />
-                  </div>
-
-                  <Select
-                    value={selectedCategory}
-                    onValueChange={(v) => setSelectedCategory(v)}
-                  >
-                    <SelectTrigger className='w-48'>
-                      <SelectValue placeholder='Category' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoryOptions.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.label} ({c.count})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={sortBy}
-                    onValueChange={(v) => setSortBy(v as any)}
-                  >
-                    <SelectTrigger className='w-48'>
-                      <SelectValue placeholder='Sort By' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='alphabetical'>A-Z</SelectItem>
-                      <SelectItem value='category'>Category</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='space-y-4'>
-                  {filteredItems.map((item) => {
-                    const itemNameLower = (item.name || '').toLowerCase();
-                    return (
-                      <Card
-                        key={item.id}
-                        className='hover:shadow-md transition-shadow'
-                      >
-                        <CardContent className='p-6'>
-                          <div className='flex items-start justify-between'>
-                            <div className='flex space-x-4 flex-1'>
-                              <div className='p-2 rounded-lg bg-gray-50'>
-                                <Clock className='h-8 w-8 text-blue-800' />
-                              </div>
-                              <div className='flex-1'>
-                                <h3 className='text-lg font-semibold mb-1'>
-                                  {item.name}
-                                </h3>
-                                <p className='text-gray-600 mb-3'>
-                                  {item.description}
-                                </p>
-                                <div className='flex items-center space-x-3'>
-                                  <div className='flex items-center text-sm text-gray-700'>
-                                    <Calendar className='h-4 w-4 mr-1 text-gray-500' />
-                                    <span>{item.type || 'N/A'}</span>
-                                  </div>
-                                  {item.category && (
-                                    <Badge variant='secondary'>
-                                      {item.category.name}
-                                    </Badge>
-                                  )}
-                                  <Badge
-                                    variant={
-                                      item.availability === '24/7'
-                                        ? 'default'
-                                        : 'secondary'
-                                    }
-                                  >
-                                    {item.availability || 'Business hours'}
-                                  </Badge>
-                                  <Badge variant='outline'>{item.status}</Badge>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className='flex flex-col items-end justify-between ml-6 w-40'>
-                              <div className='flex space-x-2'>
-                                <Button
-                                  variant='ghost'
-                                  onClick={() => openEdit(item)}
-                                >
-                                  <Edit className='h-4 w-4' />
-                                </Button>
-                                <Button
-                                  variant='destructive'
-                                  onClick={() => openDelete(item)}
-                                >
-                                  <Trash className='h-4 w-4' />
-                                </Button>
-                              </div>
-
-                              <div className='text-sm text-right'>
-                                {((item as any).imageUrl ||
-                                  (item as any).image_url) && (
-                                  <img
-                                    src={
-                                      (item as any).imageUrl ||
-                                      (item as any).image_url
-                                    }
-                                    alt={item.name}
-                                    className='mt-2 w-24 h-14 object-cover rounded'
-                                  />
-                                )}
-                              </div>
-                            </div>
+                <AnimatePresence mode='wait'>
+                  {loading ? (
+                    <motion.div
+                      key='loading'
+                      initial={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className='flex flex-col items-center justify-center py-20'
+                    >
+                      <Image
+                        src='/Loading Files.gif'
+                        alt='Loading Files'
+                        width={200}
+                        height={200}
+                        className='rounded-lg'
+                        unoptimized
+                      />
+                      <p className='mt-4 text-gray-600 font-medium text-lg'>
+                        Loading Services...
+                      </p>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key='content'
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.4, delay: 0.1 }}
+                    >
+                      <>
+                        <div className='flex items-center gap-4'>
+                          <div className='flex-1 relative'>
+                            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4' />
+                            <Input
+                              type='text'
+                              placeholder='Search items...'
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className='pl-10'
+                            />
                           </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
 
-                {filteredItems.length === 0 && (
-                  <div className='text-center py-12'>
-                    <div className='text-gray-400 text-lg mb-2'>
-                      No items found
-                    </div>
-                    <p className='text-gray-600'>
-                      Try adjusting your search or filter criteria
-                    </p>
-                  </div>
-                )}
+                          <Select
+                            value={selectedCategory}
+                            onValueChange={(v) => setSelectedCategory(v)}
+                          >
+                            <SelectTrigger className='w-48'>
+                              <SelectValue placeholder='Category' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categoryOptions.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.label} ({c.count})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          <Select
+                            value={sortBy}
+                            onValueChange={(v) => setSortBy(v as any)}
+                          >
+                            <SelectTrigger className='w-48'>
+                              <SelectValue placeholder='Sort By' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value='alphabetical'>A-Z</SelectItem>
+                              <SelectItem value='category'>Category</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className='space-y-4'>
+                          {filteredItems.map((item) => {
+                            const itemNameLower = (
+                              item.name || ''
+                            ).toLowerCase();
+                            return (
+                              <Card
+                                key={item.id}
+                                className='hover:shadow-md transition-shadow'
+                              >
+                                <CardContent className='p-6'>
+                                  <div className='flex items-start justify-between'>
+                                    <div className='flex space-x-4 flex-1'>
+                                      <div className='p-2 rounded-lg bg-gray-50'>
+                                        <Clock className='h-8 w-8 text-blue-800' />
+                                      </div>
+                                      <div className='flex-1'>
+                                        <h3 className='text-lg font-semibold mb-1'>
+                                          {item.name}
+                                        </h3>
+                                        <p className='text-gray-600 mb-3'>
+                                          {item.description}
+                                        </p>
+                                        <div className='flex items-center space-x-3'>
+                                          <div className='flex items-center text-sm text-gray-700'>
+                                            <Calendar className='h-4 w-4 mr-1 text-gray-500' />
+                                            <span>{item.type || 'N/A'}</span>
+                                          </div>
+                                          {item.category && (
+                                            <Badge variant='secondary'>
+                                              {item.category.name}
+                                            </Badge>
+                                          )}
+                                          <Badge
+                                            variant={
+                                              item.availability === '24/7'
+                                                ? 'default'
+                                                : 'secondary'
+                                            }
+                                          >
+                                            {item.availability ||
+                                              'Business hours'}
+                                          </Badge>
+                                          <Badge variant='outline'>
+                                            {item.status}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className='flex flex-col items-end justify-between ml-6 w-40'>
+                                      <div className='flex space-x-2'>
+                                        <Button
+                                          variant='ghost'
+                                          onClick={() => openEdit(item)}
+                                        >
+                                          <Edit className='h-4 w-4' />
+                                        </Button>
+                                        <Button
+                                          variant='destructive'
+                                          onClick={() => openDelete(item)}
+                                        >
+                                          <Trash className='h-4 w-4' />
+                                        </Button>
+                                      </div>
+
+                                      <div className='text-sm text-right'>
+                                        {((item as any).imageUrl ||
+                                          (item as any).image_url) && (
+                                          <img
+                                            src={
+                                              (item as any).imageUrl ||
+                                              (item as any).image_url
+                                            }
+                                            alt={item.name}
+                                            className='mt-2 w-24 h-14 object-cover rounded'
+                                          />
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+
+                        {filteredItems.length === 0 && (
+                          <div className='text-center py-12'>
+                            <div className='text-gray-400 text-lg mb-2'>
+                              No items found
+                            </div>
+                            <p className='text-gray-600'>
+                              Try adjusting your search or filter criteria
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </TabsContent>
 
@@ -742,103 +764,141 @@ export function AdminDirectory({ onNavigate }: AdminDirectoryProps) {
             <TabsContent value='facilities' className='mt-6'>
               {/* reuse the same UI since filtering is handled above */}
               <div className='space-y-6'>
-                <div className='flex items-center gap-4'>
-                  <div className='flex-1 relative'>
-                    <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4' />
-                    <Input
-                      type='text'
-                      placeholder='Search facilities...'
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className='pl-10'
-                    />
-                  </div>
-
-                  <Select
-                    value={selectedCategory}
-                    onValueChange={(v) => setSelectedCategory(v)}
-                  >
-                    <SelectTrigger className='w-48'>
-                      <SelectValue placeholder='Category' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoryOptions.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.label} ({c.count})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={sortBy}
-                    onValueChange={(v) => setSortBy(v as any)}
-                  >
-                    <SelectTrigger className='w-48'>
-                      <SelectValue placeholder='Sort By' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='alphabetical'>A-Z</SelectItem>
-                      <SelectItem value='category'>Category</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='space-y-4'>
-                  {filteredItems.map((item) => (
-                    <Card
-                      key={item.id}
-                      className='hover:shadow-md transition-shadow'
+                <AnimatePresence mode='wait'>
+                  {loading ? (
+                    <motion.div
+                      key='loading'
+                      initial={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className='flex flex-col items-center justify-center py-20'
                     >
-                      <CardContent className='p-4'>
-                        <div className='flex items-start space-x-3'>
-                          <div className='p-2 rounded-lg bg-gray-50'>
-                            <MapPin className='h-8 w-8 text-blue-800' />
-                          </div>
-                          <div className='flex-1'>
-                            <h3 className='font-semibold mb-1'>{item.name}</h3>
-                            <p className='text-sm text-gray-600 mb-2'>
-                              {item.description}
-                            </p>
-                            {item.category && (
-                              <Badge variant='secondary' className='mt-2'>
-                                {item.category.name}
-                              </Badge>
-                            )}
+                      <Image
+                        src='/Loading Files.gif'
+                        alt='Loading Files'
+                        width={200}
+                        height={200}
+                        className='rounded-lg'
+                        unoptimized
+                      />
+                      <p className='mt-4 text-gray-600 font-medium text-lg'>
+                        Loading Facilities...
+                      </p>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key='content'
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.4, delay: 0.1 }}
+                    >
+                      <>
+                        <div className='flex items-center gap-4'>
+                          <div className='flex-1 relative'>
+                            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4' />
+                            <Input
+                              type='text'
+                              placeholder='Search facilities...'
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className='pl-10'
+                            />
                           </div>
 
-                          <div className='flex flex-col items-end space-y-2'>
-                            <div className='flex space-x-2'>
-                              <Button
-                                variant='ghost'
-                                onClick={() => openEdit(item)}
-                              >
-                                <Edit className='h-4 w-4' />
-                              </Button>
-                              <Button
-                                variant='destructive'
-                                onClick={() => openDelete(item)}
-                              >
-                                <Trash className='h-4 w-4' />
-                              </Button>
-                            </div>
-                            {((item as any).imageUrl ||
-                              (item as any).image_url) && (
-                              <img
-                                src={
-                                  (item as any).imageUrl ||
-                                  (item as any).image_url
-                                }
-                                alt={item.name}
-                                className='w-28 h-16 object-cover rounded'
-                              />
-                            )}
-                          </div>
+                          <Select
+                            value={selectedCategory}
+                            onValueChange={(v) => setSelectedCategory(v)}
+                          >
+                            <SelectTrigger className='w-48'>
+                              <SelectValue placeholder='Category' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categoryOptions.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.label} ({c.count})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          <Select
+                            value={sortBy}
+                            onValueChange={(v) => setSortBy(v as any)}
+                          >
+                            <SelectTrigger className='w-48'>
+                              <SelectValue placeholder='Sort By' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value='alphabetical'>A-Z</SelectItem>
+                              <SelectItem value='category'>Category</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+
+                        <div className='space-y-4'>
+                          {filteredItems.map((item) => (
+                            <Card
+                              key={item.id}
+                              className='hover:shadow-md transition-shadow'
+                            >
+                              <CardContent className='p-4'>
+                                <div className='flex items-start space-x-3'>
+                                  <div className='p-2 rounded-lg bg-gray-50'>
+                                    <MapPin className='h-8 w-8 text-blue-800' />
+                                  </div>
+                                  <div className='flex-1'>
+                                    <h3 className='font-semibold mb-1'>
+                                      {item.name}
+                                    </h3>
+                                    <p className='text-sm text-gray-600 mb-2'>
+                                      {item.description}
+                                    </p>
+                                    {item.category && (
+                                      <Badge
+                                        variant='secondary'
+                                        className='mt-2'
+                                      >
+                                        {item.category.name}
+                                      </Badge>
+                                    )}
+                                  </div>
+
+                                  <div className='flex flex-col items-end space-y-2'>
+                                    <div className='flex space-x-2'>
+                                      <Button
+                                        variant='ghost'
+                                        onClick={() => openEdit(item)}
+                                      >
+                                        <Edit className='h-4 w-4' />
+                                      </Button>
+                                      <Button
+                                        variant='destructive'
+                                        onClick={() => openDelete(item)}
+                                      >
+                                        <Trash className='h-4 w-4' />
+                                      </Button>
+                                    </div>
+                                    {((item as any).imageUrl ||
+                                      (item as any).image_url) && (
+                                      <img
+                                        src={
+                                          (item as any).imageUrl ||
+                                          (item as any).image_url
+                                        }
+                                        alt={item.name}
+                                        className='w-28 h-16 object-cover rounded'
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </TabsContent>
           </Tabs>

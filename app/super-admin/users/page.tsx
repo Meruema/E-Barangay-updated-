@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { useRouterWithProgress } from '@/lib/hooks/useRouterWithProgress';
 import {
   Table,
   TableHeader,
@@ -63,7 +63,7 @@ export default function ManageUsersPage() {
   const [barangayFilter, setBarangayFilter] = useState('__ALL__');
   const [pendingBarangayFilter, setPendingBarangayFilter] = useState('__ALL__');
   const [sheetOpen, setSheetOpen] = useState(false);
-  const router = useRouter();
+  const router = useRouterWithProgress();
 
   // Get current user info
   // eslint-disable-next-line @typescript-eslint/no-var-requires

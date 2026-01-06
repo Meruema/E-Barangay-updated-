@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { useRouterWithProgress } from '@/lib/hooks/useRouterWithProgress';
 
 export default function ManageBarangaysPage() {
   const [barangays, setBarangays] = useState([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const router = useRouterWithProgress();
 
   useEffect(() => {
     async function fetchBarangays() {

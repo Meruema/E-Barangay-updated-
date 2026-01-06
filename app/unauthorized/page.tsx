@@ -1,12 +1,12 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { ShieldX, Home, ArrowLeft } from 'lucide-react';
+import { useRouterWithProgress } from '@/lib/hooks/useRouterWithProgress';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function UnauthorizedPage() {
-  const router = useRouter();
+  const router = useRouterWithProgress();
 
   return (
     <div className='min-h-screen bg-gradient-to-b from-blue-50 to-gray-100 flex items-center justify-center p-6'>

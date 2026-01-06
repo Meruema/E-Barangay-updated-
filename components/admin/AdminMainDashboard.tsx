@@ -1,6 +1,5 @@
 'use client';
 
-import { Header } from './AdminHeader';
 import {
   Card,
   CardContent,
@@ -14,14 +13,13 @@ import { getStatistics } from '@/lib/api/statistics';
 import { useEffect, useState } from 'react';
 import { getAllRequests } from '@/lib/api/requests';
 import { TrendingUp } from 'lucide-react';
+import { useRouterWithProgress } from '@/lib/hooks/useRouterWithProgress';
 import Footer from '../Footer';
 
-interface MainDashboardProps {
-  onNavigate: (view: 'dashboard' | 'directory' | 'requests' | 'users') => void;
-}
-
-export function MainDashboard({ onNavigate }: MainDashboardProps) {
+export function MainDashboard() {
+  const router = useRouterWithProgress();
   const [stats, setStats] = useState<any>(null);
+  const [recentRequests, setRecentRequests] = useState<Array<any>>([]);
 
   useEffect(() => {
     async function loadStats() {
@@ -39,13 +37,9 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     loadStats();
   }, []);
 
-  const [recentRequests, setRecentRequests] = useState<Array<any>>([]);
-
   return (
     <div>
-      <div className='min-h-screen bg-gradient-to-b from-blue-50 to-gray-200 p-6 rounded-lg m-5'>
-        <Header onNavigate={onNavigate} />
-
+      <div className='bg-gradient-to-b from-blue-50 to-gray-200 p-6 rounded-lg m-5'>
         <main className='max-w-7xl mx-auto px-4 py-8'>
           {/* Hero Section */}
           <div className='items-center pd-10 md:p-10 text-center'>
@@ -82,7 +76,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
 
                   <Button
                     variant='outline'
-                    onClick={() => onNavigate('requests')}
+                    onClick={() => router.push('/admin/requests')}
                   >
                     View All
                   </Button>
@@ -100,7 +94,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                     <Card
                       key={req.id}
                       className='cursor-pointer hover:shadow-lg transition'
-                      onClick={() => onNavigate('requests')}
+                      onClick={() => router.push('/admin/requests')}
                     >
                       <CardHeader className='pb-2'>
                         <div className='flex justify-between items-start'>

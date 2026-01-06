@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { useRouterWithProgress } from '@/lib/hooks/useRouterWithProgress';
 import { Landmark, Menu } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -52,7 +52,7 @@ export default function SuperAdminPage() {
   });
   const [editLoading, setEditLoading] = useState(false);
   const [removeLoading, setRemoveLoading] = useState(false);
-  const router = useRouter();
+  const router = useRouterWithProgress();
 
   useEffect(() => {
     async function fetchBarangays() {

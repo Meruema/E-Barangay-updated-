@@ -15,6 +15,9 @@ import { Label } from '../ui/label';
 import Footer from '../Footer';
 import { useItems, useCategories } from '@/lib/hooks/useItems';
 import { getStatistics } from '@/lib/api/statistics';
+import { getUserRequests, updateRequestStatus } from '@/lib/api/requests';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { toast } from 'sonner';
 
 import {
   Plane,
@@ -33,6 +36,9 @@ import {
   Warehouse,
   FileCheck2,
   Clock,
+  XCircle,
+  AlertCircle,
+  Ban,
 } from 'lucide-react';
 
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
@@ -175,31 +181,49 @@ const Faq1 = ({
 };
 
 export function MainDashboard({ onNavigate }: MainDashboardProps) {
+  const { user } = useAuth();
   const { items: services, loading: servicesLoading } = useItems('service');
   const { items: facilities, loading: facilitiesLoading } =
     useItems('facility');
   const { categories, loading: categoriesLoading } = useCategories();
-  const [stats, setStats] = useState({
-    totalServices: 0,
-    totalFacilities: 0,
-    totalRequests: 0,
-  });
+  const [requests, setRequests] = useState<any[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  const handleCancelRequest = async (requestId: string) => {
+    if (!user) return;
+
+    setCancellingId(requestId);
+    try {
+      await updateRequestStatus(requestId, 'cancelled', user.id);
+      toast.success('Request cancelled successfully');
+
+      // Reload requests
+      const userRequests = await getUserRequests(user.id);
+      setRequests(userRequests);
+    } catch (error) {
+      console.error('Failed to cancel request:', error);
+      toast.error('Failed to cancel request');
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   useEffect(() => {
-    async function loadStats() {
+    async function loadRequests() {
+      if (!user) return;
       try {
-        const statistics = await getStatistics();
-        setStats({
-          totalServices: statistics.totalServices,
-          totalFacilities: statistics.totalFacilities,
-          totalRequests: statistics.totalRequests,
-        });
+        setRequestsLoading(true);
+        const userRequests = await getUserRequests(user.id);
+        setRequests(userRequests);
       } catch (error) {
-        console.error('Failed to load statistics:', error);
+        console.error('Failed to load requests:', error);
+      } finally {
+        setRequestsLoading(false);
       }
     }
-    loadStats();
-  }, []);
+    loadRequests();
+  }, [user]);
 
   // Group services by category
   const serviceCategories = categories
@@ -339,130 +363,320 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
 
           <div id='permits' className='grid lg:grid-cols-3 gap-8'>
             {/* Main Content */}
-            <div className='lg:col-span-2'>
-              {/* Service Categories */}
-              <div className='mb-8 bg-blue-200 p-6 rounded-lg'>
+            <div className='lg:col-span-2 space-y-8'>
+              {/* Pending Requests */}
+              <div className='bg-yellow-50 p-6 rounded-lg'>
                 <div className='flex items-center justify-between mb-6'>
-                  <h2 className='text-2xl'>Permits & Licenses</h2>
-                  <Button
-                    variant='outline'
-                    onClick={() => onNavigate('services')}
-                  >
-                    View All
-                    <ArrowRight className='ml-2 h-4 w-4' />
-                  </Button>
+                  <h2 className='text-2xl font-semibold text-yellow-800'>
+                    Pending Requests
+                  </h2>
                 </div>
 
-                <div className='grid md:grid-cols-2 gap-4'>
-                  {serviceCategories.map((category) => {
-                    const IconComponent = category.icon;
-                    return (
-                      <Card
-                        key={category.id}
-                        className='hover:shadow-lg transition-shadow cursor-pointer relative'
-                        onClick={() => onNavigate('services')}
-                      >
-                        <CardHeader className='pb-3'>
-                          <div className='flex items-start justify-between'>
-                            <div className={`p-3 rounded-lg ${category.color}`}>
-                              <IconComponent className='h-6 w-6' />
-                            </div>
-                            <div className='flex flex-col items-end space-y-1'>
-                              <Badge variant='secondary'>
-                                {category.count} services
-                              </Badge>
-                              {category.popular && (
-                                <Badge className='bg-yellow-100 text-yellow-800'>
-                                  <Star className='h-3 w-3 mr-1' />
-                                  Popular
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <CardTitle className='text-lg'>
-                            {category.title}
-                          </CardTitle>
-                          <CardDescription>
-                            {category.description}
-                          </CardDescription>
-                        </CardHeader>
+                {requestsLoading ? (
+                  <div className='text-center py-8 text-muted-foreground'>
+                    Loading requests...
+                  </div>
+                ) : (
+                  <div className='space-y-3'>
+                    {requests.filter((r) => r.status === 'pending').length ===
+                    0 ? (
+                      <Card>
+                        <CardContent className='py-8 text-center text-muted-foreground'>
+                          No pending requests
+                        </CardContent>
                       </Card>
-                    );
-                  })}
-                </div>
+                    ) : (
+                      requests
+                        .filter((r) => r.status === 'pending')
+                        .slice(0, 5)
+                        .map((request) => (
+                          <Card
+                            key={request.id}
+                            className='hover:shadow-md transition-shadow'
+                          >
+                            <CardContent className='p-4'>
+                              <div className='flex items-start justify-between gap-4'>
+                                <div className='flex-1'>
+                                  <div className='flex items-center gap-2 mb-1'>
+                                    <Clock className='h-4 w-4 text-yellow-600' />
+                                    <h3 className='font-semibold text-base'>
+                                      {request.item?.name || 'Unknown Service'}
+                                    </h3>
+                                  </div>
+                                  <p className='text-sm text-muted-foreground mb-2'>
+                                    {new Date(
+                                      request.submittedAt,
+                                    ).toLocaleDateString()}
+                                  </p>
+                                  {request.reason && (
+                                    <p className='text-sm text-muted-foreground line-clamp-2'>
+                                      <span className='font-medium'>
+                                        Reason:
+                                      </span>{' '}
+                                      {request.reason}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className='flex flex-col items-end gap-2'>
+                                  <Badge className='bg-yellow-100 text-yellow-800 border-yellow-200'>
+                                    Pending
+                                  </Badge>
+                                  <Button
+                                    size='sm'
+                                    variant='outline'
+                                    onClick={() =>
+                                      handleCancelRequest(request.id)
+                                    }
+                                    disabled={cancellingId === request.id}
+                                    className='text-red-600 hover:text-red-700 hover:bg-red-50'
+                                  >
+                                    <XCircle className='h-4 w-4 mr-1' />
+                                    {cancellingId === request.id
+                                      ? 'Cancelling...'
+                                      : 'Cancel'}
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Facility Reservation */}
-              <div className='mb-8 bg-blue-200 p-6 rounded-lg'>
+              {/* Approved Requests */}
+              <div className='bg-green-50 p-6 rounded-lg'>
                 <div className='flex items-center justify-between mb-6'>
-                  <h2 className='text-2xl'>Facilities Reservation</h2>
-                  <Button
-                    variant='outline'
-                    onClick={() => onNavigate('facilities')}
-                  >
-                    View All
-                    <ArrowRight className='ml-2 h-4 w-4' />
-                  </Button>
+                  <h2 className='text-2xl font-semibold text-green-800'>
+                    Approved Requests
+                  </h2>
                 </div>
 
-                <div className='grid md:grid-cols-2 gap-4'>
-                  {facilityReservation.map((category) => {
-                    const IconComponent = category.icon;
-                    return (
-                      <Card
-                        key={category.id}
-                        className='hover:shadow-lg transition-shadow cursor-pointer relative'
-                        onClick={() => onNavigate('facilities')}
-                      >
-                        <CardHeader className='pb-3'>
-                          <div className='flex items-start justify-between'>
-                            <div className={`p-3 rounded-lg ${category.color}`}>
-                              <IconComponent className='h-6 w-6' />
-                            </div>
-                            <div className='flex flex-col items-end space-y-1'>
-                              <Badge variant='secondary'>
-                                {category.count} facility
-                              </Badge>
-                              {category.popular && (
-                                <Badge className='bg-yellow-100 text-yellow-800'>
-                                  <Star className='h-3 w-3 mr-1' />
-                                  Popular
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <CardTitle className='text-lg'>
-                            {category.title}
-                          </CardTitle>
-                          <CardDescription>
-                            {category.description}
-                          </CardDescription>
-                        </CardHeader>
+                {requestsLoading ? (
+                  <div className='text-center py-8 text-muted-foreground'>
+                    Loading requests...
+                  </div>
+                ) : (
+                  <div className='space-y-3'>
+                    {requests.filter((r) => r.status === 'approved').length ===
+                    0 ? (
+                      <Card>
+                        <CardContent className='py-8 text-center text-muted-foreground'>
+                          No approved requests
+                        </CardContent>
                       </Card>
-                    );
-                  })}
+                    ) : (
+                      requests
+                        .filter((r) => r.status === 'approved')
+                        .slice(0, 5)
+                        .map((request) => (
+                          <Card
+                            key={request.id}
+                            className='hover:shadow-md transition-shadow'
+                          >
+                            <CardContent className='p-4'>
+                              <div className='flex items-start justify-between gap-4'>
+                                <div className='flex-1'>
+                                  <div className='flex items-center gap-2 mb-1'>
+                                    <FileCheck2 className='h-4 w-4 text-green-600' />
+                                    <h3 className='font-semibold text-base'>
+                                      {request.item?.name || 'Unknown Service'}
+                                    </h3>
+                                  </div>
+                                  <p className='text-sm text-muted-foreground mb-2'>
+                                    {new Date(
+                                      request.submittedAt,
+                                    ).toLocaleDateString()}
+                                  </p>
+                                  {request.actions &&
+                                    request.actions.length > 0 && (
+                                      <div className='text-sm mt-2'>
+                                        {request.actions
+                                          .filter(
+                                            (a: any) =>
+                                              a.actionType === 'approved',
+                                          )
+                                          .map((action: any, idx: number) => (
+                                            <div
+                                              key={idx}
+                                              className='text-muted-foreground'
+                                            >
+                                              {action.remarks && (
+                                                <p className='line-clamp-2'>
+                                                  <span className='font-medium'>
+                                                    Remarks:
+                                                  </span>{' '}
+                                                  {action.remarks}
+                                                </p>
+                                              )}
+                                            </div>
+                                          ))}
+                                      </div>
+                                    )}
+                                </div>
+                                <Badge className='bg-green-100 text-green-800 border-green-200'>
+                                  Approved
+                                </Badge>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Rejected Requests */}
+              <div className='bg-red-50 p-6 rounded-lg'>
+                <div className='flex items-center justify-between mb-6'>
+                  <h2 className='text-2xl font-semibold text-red-800'>
+                    Rejected Requests
+                  </h2>
                 </div>
+
+                {requestsLoading ? (
+                  <div className='text-center py-8 text-muted-foreground'>
+                    Loading requests...
+                  </div>
+                ) : (
+                  <div className='space-y-3'>
+                    {requests.filter((r) => r.status === 'rejected').length ===
+                    0 ? (
+                      <Card>
+                        <CardContent className='py-8 text-center text-muted-foreground'>
+                          No rejected requests
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      requests
+                        .filter((r) => r.status === 'rejected')
+                        .slice(0, 5)
+                        .map((request) => (
+                          <Card
+                            key={request.id}
+                            className='hover:shadow-md transition-shadow'
+                          >
+                            <CardContent className='p-4'>
+                              <div className='flex items-start justify-between gap-4'>
+                                <div className='flex-1'>
+                                  <div className='flex items-center gap-2 mb-1'>
+                                    <AlertCircle className='h-4 w-4 text-red-600' />
+                                    <h3 className='font-semibold text-base'>
+                                      {request.item?.name || 'Unknown Service'}
+                                    </h3>
+                                  </div>
+                                  <p className='text-sm text-muted-foreground mb-2'>
+                                    {new Date(
+                                      request.submittedAt,
+                                    ).toLocaleDateString()}
+                                  </p>
+                                  {request.actions &&
+                                    request.actions.length > 0 && (
+                                      <div className='text-sm mt-2'>
+                                        {request.actions
+                                          .filter(
+                                            (a: any) =>
+                                              a.actionType === 'rejected',
+                                          )
+                                          .map((action: any, idx: number) => (
+                                            <div
+                                              key={idx}
+                                              className='text-muted-foreground'
+                                            >
+                                              {action.remarks && (
+                                                <p className='line-clamp-2'>
+                                                  <span className='font-medium'>
+                                                    Remarks:
+                                                  </span>{' '}
+                                                  {action.remarks}
+                                                </p>
+                                              )}
+                                            </div>
+                                          ))}
+                                      </div>
+                                    )}
+                                </div>
+                                <Badge className='bg-red-100 text-red-800 border-red-200'>
+                                  Rejected
+                                </Badge>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Cancelled Requests */}
+              <div className='bg-gray-50 p-6 rounded-lg'>
+                <div className='flex items-center justify-between mb-6'>
+                  <h2 className='text-2xl font-semibold text-gray-800'>
+                    Cancelled Requests
+                  </h2>
+                </div>
+
+                {requestsLoading ? (
+                  <div className='text-center py-8 text-muted-foreground'>
+                    Loading requests...
+                  </div>
+                ) : (
+                  <div className='space-y-3'>
+                    {requests.filter((r) => r.status === 'cancelled').length ===
+                    0 ? (
+                      <Card>
+                        <CardContent className='py-8 text-center text-muted-foreground'>
+                          No cancelled requests
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      requests
+                        .filter((r) => r.status === 'cancelled')
+                        .slice(0, 5)
+                        .map((request) => (
+                          <Card
+                            key={request.id}
+                            className='hover:shadow-md transition-shadow'
+                          >
+                            <CardContent className='p-4'>
+                              <div className='flex items-start justify-between gap-4'>
+                                <div className='flex-1'>
+                                  <div className='flex items-center gap-2 mb-1'>
+                                    <Ban className='h-4 w-4 text-gray-600' />
+                                    <h3 className='font-semibold text-base'>
+                                      {request.item?.name || 'Unknown Service'}
+                                    </h3>
+                                  </div>
+                                  <p className='text-sm text-muted-foreground mb-2'>
+                                    {new Date(
+                                      request.submittedAt,
+                                    ).toLocaleDateString()}
+                                  </p>
+                                  {request.reason && (
+                                    <p className='text-sm text-muted-foreground line-clamp-2'>
+                                      <span className='font-medium'>
+                                        Original Reason:
+                                      </span>{' '}
+                                      {request.reason}
+                                    </p>
+                                  )}
+                                </div>
+                                <Badge className='bg-gray-100 text-gray-800 border-gray-200'>
+                                  Cancelled
+                                </Badge>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Sidebar */}
             <div className='space-y-6'>
-              {/* Stats */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center font-semibold'>
-                    <TrendingUp className='h-5 w-5 mr-2' />
-                    Your Request Statistics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className='space-y-4'>
-                  <div className='flex justify-between items-center'>
-                    <span className='text-sm'>Total Requests</span>
-                    <span className='font-semibold'>{stats.totalRequests}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
               {/* Frequently Asked Questions */}
               <Card>
                 <CardHeader>

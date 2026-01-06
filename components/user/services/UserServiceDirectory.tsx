@@ -11,6 +11,17 @@ import {
 } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Input } from '../../ui/input';
+import { Button } from '../../ui/button';
+import { Textarea } from '../../ui/textarea';
+import { Label } from '../../ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../ui/dialog';
 import {
   Select,
   SelectContent,
@@ -20,6 +31,8 @@ import {
 } from '../../ui/select';
 import { useItems, useCategories } from '@/lib/hooks/useItems';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { createRequest } from '@/lib/api/requests';
+import { toast } from 'sonner';
 import {
   FileCheck,
   Building,
@@ -81,6 +94,11 @@ export function ServiceDirectory({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('alphabetical');
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [selectedServiceForRequest, setSelectedServiceForRequest] =
+    useState<any>(null);
+  const [requestReason, setRequestReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const categoryOptions = useMemo(() => {
     const allOption = {
@@ -129,6 +147,29 @@ export function ServiceDirectory({
 
   const featuredServices = filteredServices.slice(0, 6); // Show first 6 as featured
 
+  const handleServiceClick = (service: any) => {
+    setSelectedServiceForRequest(service);
+    setRequestReason('');
+    setRequestModalOpen(true);
+  };
+
+  const handleSubmitRequest = async () => {
+    if (!user || !selectedServiceForRequest) return;
+
+    setSubmitting(true);
+    try {
+      await createRequest(user.id, selectedServiceForRequest.id, requestReason);
+      toast.success('Request submitted successfully!');
+      setRequestModalOpen(false);
+      setRequestReason('');
+    } catch (error) {
+      console.error('Failed to submit request:', error);
+      toast.error('Failed to submit request');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
@@ -163,7 +204,7 @@ export function ServiceDirectory({
                       >
                         <Card
                           className='border-2 border-blue-300 rounded-lg hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col'
-                          onClick={() => onSelectService(service.id)}
+                          onClick={() => handleServiceClick(service)}
                         >
                           <CardHeader className='pb-3 text-center'>
                             <div className='flex justify-center'>
@@ -270,7 +311,7 @@ export function ServiceDirectory({
                   <Card
                     key={service.id}
                     className='hover:shadow-md transition-shadow cursor-pointer border-r-5 border-r-blue-700'
-                    onClick={() => onSelectService(service.id)}
+                    onClick={() => handleServiceClick(service)}
                   >
                     <CardContent className='p-6'>
                       <div className='flex items-start justify-between'>
@@ -355,6 +396,64 @@ export function ServiceDirectory({
         {' '}
         <Footer />{' '}
       </div>
+
+      {/* Request Modal */}
+      <Dialog open={requestModalOpen} onOpenChange={setRequestModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Service</DialogTitle>
+            <DialogDescription>
+              {selectedServiceForRequest && (
+                <>Submit a request for "{selectedServiceForRequest.name}"</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {selectedServiceForRequest && (
+              <>
+                <div>
+                  <Label className='text-sm font-medium'>Service:</Label>
+                  <p className='text-sm text-muted-foreground mt-1'>
+                    {selectedServiceForRequest.name}
+                  </p>
+                </div>
+                <div>
+                  <Label className='text-sm font-medium'>Description:</Label>
+                  <p className='text-sm text-muted-foreground mt-1'>
+                    {selectedServiceForRequest.description || 'N/A'}
+                  </p>
+                </div>
+              </>
+            )}
+            <div>
+              <Label htmlFor='reason'>Reason for Request (Optional)</Label>
+              <Textarea
+                id='reason'
+                placeholder='Please provide details about your request...'
+                value={requestReason}
+                onChange={(e) => setRequestReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setRequestModalOpen(false)}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitRequest}
+              disabled={submitting}
+              className='bg-blue-600 hover:bg-blue-700'
+            >
+              {submitting ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

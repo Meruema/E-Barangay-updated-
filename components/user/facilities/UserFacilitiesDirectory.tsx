@@ -3,6 +3,17 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Header } from '../UserHeader';
 import { Input } from '../../ui/input';
+import { Button } from '../../ui/button';
+import { Textarea } from '../../ui/textarea';
+import { Label } from '../../ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../ui/dialog';
 import { Search, Clock } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import {
@@ -23,6 +34,8 @@ import * as L from 'leaflet';
 import Footer from '../../Footer';
 import { useItems, useCategories } from '@/lib/hooks/useItems';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { createRequest } from '@/lib/api/requests';
+import { toast } from 'sonner';
 
 interface FacilityDirectoryProps {
   onNavigate: (
@@ -46,6 +59,11 @@ export function FacilitiesDirectory({
   const { categories } = useCategories();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [selectedFacilityForRequest, setSelectedFacilityForRequest] =
+    useState<any>(null);
+  const [requestReason, setRequestReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // Fix for Leaflet default icon in Next.js - only run on client
   useEffect(() => {
@@ -91,6 +109,33 @@ export function FacilitiesDirectory({
       return matchesSearch && matchesCategory;
     });
   }, [facilities, searchTerm, selectedCategory]);
+
+  const handleFacilityClick = (facility: any) => {
+    setSelectedFacilityForRequest(facility);
+    setRequestReason('');
+    setRequestModalOpen(true);
+  };
+
+  const handleSubmitRequest = async () => {
+    if (!user || !selectedFacilityForRequest) return;
+
+    setSubmitting(true);
+    try {
+      await createRequest(
+        user.id,
+        selectedFacilityForRequest.id,
+        requestReason,
+      );
+      toast.success('Request submitted successfully!');
+      setRequestModalOpen(false);
+      setRequestReason('');
+    } catch (error) {
+      console.error('Failed to submit request:', error);
+      toast.error('Failed to submit request');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -182,7 +227,7 @@ export function FacilitiesDirectory({
                 <div key={facility.id} className='w-full max-w-4xl'>
                   <Card
                     className='rounded-lg hover:shadow-lg transition-shadow cursor-pointer max-h-120px flex flex-col'
-                    onClick={() => onSelectFacility(facility.id)}
+                    onClick={() => handleFacilityClick(facility)}
                   >
                     <CardHeader className='pb-3'>
                       <div className='flex items-start gap-4'>
@@ -251,6 +296,70 @@ export function FacilitiesDirectory({
         {' '}
         <Footer />{' '}
       </div>
+
+      {/* Request Modal */}
+      <Dialog open={requestModalOpen} onOpenChange={setRequestModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Facility</DialogTitle>
+            <DialogDescription>
+              {selectedFacilityForRequest && (
+                <>Submit a request for "{selectedFacilityForRequest.name}"</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {selectedFacilityForRequest && (
+              <>
+                <div>
+                  <Label className='text-sm font-medium'>Facility:</Label>
+                  <p className='text-sm text-muted-foreground mt-1'>
+                    {selectedFacilityForRequest.name}
+                  </p>
+                </div>
+                <div>
+                  <Label className='text-sm font-medium'>Description:</Label>
+                  <p className='text-sm text-muted-foreground mt-1'>
+                    {selectedFacilityForRequest.description || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <Label className='text-sm font-medium'>Availability:</Label>
+                  <p className='text-sm text-muted-foreground mt-1'>
+                    {selectedFacilityForRequest.availability || 'N/A'}
+                  </p>
+                </div>
+              </>
+            )}
+            <div>
+              <Label htmlFor='reason'>Reason for Request (Optional)</Label>
+              <Textarea
+                id='reason'
+                placeholder='Please provide details about your request...'
+                value={requestReason}
+                onChange={(e) => setRequestReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setRequestModalOpen(false)}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitRequest}
+              disabled={submitting}
+              className='bg-blue-600 hover:bg-blue-700'
+            >
+              {submitting ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

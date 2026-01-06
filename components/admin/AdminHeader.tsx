@@ -1,7 +1,7 @@
 import { Menu, Landmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import axiosInstance from '@/lib/axios';
-import { useRouter } from 'next/navigation';
+import { useRouterWithProgress } from '@/lib/hooks/useRouterWithProgress';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +18,7 @@ interface HeaderProps {
 }
 
 export function Header({ onNavigate }: HeaderProps) {
-  const router = useRouter();
+  const router = useRouterWithProgress();
   const [logoutLoading, setLogoutLoading] = useState(false);
 
   const handleSignOut = async () => {
