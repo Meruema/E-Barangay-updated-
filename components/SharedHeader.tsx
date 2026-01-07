@@ -245,30 +245,14 @@ export function SharedHeader() {
               </Button>
             ) : user ? (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+                <DropdownMenuTrigger>
                   <Button variant='outline'>
-                        <User className='h-4 w-4 mr-2' />
-                        {user.email?.split('@')[0] || 'Account'}
+                    <User className='h-4 w-4 mr-2' />
+                    {user.email?.split('@')[0] || 'Account'}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className='w-56' align='end'>
-                  <DropdownMenuLabel>
-                    {user.role === 'SUPER_ADMIN'
-                      ? 'Super Admin'
-                      : user.role === 'ADMIN'
-                      ? 'Admin'
-                      : 'My Account'}
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
+                <DropdownMenuContent className='w-[160px]' align='end'>
                   <DropdownMenuGroup>
-                    {user.role === 'USER' && (
-                      <>
-                        <DropdownMenuItem onClick={() => router.push('/requests')}>
-                          View All Requests
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                      </>
-                    )}
                     <DropdownMenuItem onClick={handleSignOut}>
                       Log Out
                     </DropdownMenuItem>
