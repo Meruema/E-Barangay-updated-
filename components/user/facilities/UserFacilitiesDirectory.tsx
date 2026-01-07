@@ -156,25 +156,6 @@ export function FacilitiesDirectory({
             {' '}
             Barangay Facilities
           </h2>
-          <div className='w-[75%] mx-auto h-[300px] rounded-2xl overflow-hidden shadow-xl mb-8 border-1 border-blue-600'>
-            <MapContainer
-              center={[defaultLat, defaultLng]}
-              zoom={12}
-              scrollWheelZoom={false}
-              className='h-full w-full'
-            >
-              <TileLayer
-                attribution='© OpenStreetMap contributors'
-                url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-              />
-
-              {facilities.map((facility) => (
-                <Marker key={facility.id} position={[defaultLat, defaultLng]}>
-                  <Popup>{facility.name}</Popup>
-                </Marker>
-              ))}
-            </MapContainer>
-          </div>
 
           {/* FACILITIES - Search Box */}
           <div>
@@ -332,7 +313,7 @@ export function FacilitiesDirectory({
               </>
             )}
             <div>
-              <Label htmlFor='reason'>Reason for Request (Optional)</Label>
+              <Label htmlFor='reason'>Reason for Request</Label>
               <Textarea
                 id='reason'
                 placeholder='Please provide details about your request...'

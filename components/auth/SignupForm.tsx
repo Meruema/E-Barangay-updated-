@@ -324,7 +324,7 @@ export function SignupForm({
                     >
                       <rect x='2' y='4' width='12' height='8' rx='2' />
                     </svg>
-                    Blk & Lot Number
+                    House Number
                   </Label>
                   <Input
                     id='blkLot'
@@ -338,7 +338,7 @@ export function SignupForm({
                     autoComplete='address-line1'
                   />
                   <p className='text-xs text-muted-foreground ml-1'>
-                    Example: Blk 1 Lot 2
+                    Example: 1234 / BLK 1 LOT 2
                   </p>
                 </div>
                 <div className='space-y-2 mt-2'>
@@ -379,7 +379,7 @@ export function SignupForm({
           {step === 3 && (
             <>
               <div className='space-y-2'>
-                <Label htmlFor='idFile'>Upload Valid ID</Label>
+                <Label htmlFor='idFile'>Upload Valid ID / If Student, please attache photocopy of School ID with 3 signatures</Label>
                 <Input
                   id='idFile'
                   type='file'
@@ -411,7 +411,7 @@ export function SignupForm({
                 )}
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='addressFile'>Upload Proof of Address</Label>
+                <Label htmlFor='addressFile'>Upload Proof of Address/Billing Address</Label>
                 <Input
                   id='addressFile'
                   type='file'
