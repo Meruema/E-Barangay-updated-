@@ -35,7 +35,6 @@ export function SignupForm({
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [blkLot, setBlkLot] = useState('');
   const [street, setStreet] = useState('');
@@ -82,15 +81,6 @@ export function SignupForm({
       toast.error('Please upload both ID and proof of address.');
       return;
     }
-
-    // Step 4: Validate password match
-    if (step === 4) {
-      if (password !== confirmPassword) {
-        toast.error('Passwords do not match.');
-        return;
-      }
-    }
-
     setLoading(true);
     try {
       // Upload ID file
@@ -134,11 +124,10 @@ export function SignupForm({
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success('Account created successfully!');
+        toast.success('Your account is for verification. Please wait for approval. Try logging in after 24 hours.');
         onOpenChange(false);
         setEmail('');
         setPassword('');
-        setConfirmPassword('');
         setFullName('');
         setBlkLot('');
         setStreet('');
@@ -390,14 +379,7 @@ export function SignupForm({
           {step === 3 && (
             <>
               <div className='space-y-2'>
-<<<<<<< Updated upstream
-                <Label htmlFor='idFile'>
-                  Upload Valid ID / If Student, please attache photocopy of
-                  School ID with 3 signatures
-                </Label>
-=======
                 <Label htmlFor='idFile'>Upload Valid ID / If Student, please attach a photocopy of School ID with 3 signatures</Label>
->>>>>>> Stashed changes
                 <Input
                   id='idFile'
                   type='file'
@@ -429,9 +411,7 @@ export function SignupForm({
                 )}
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='addressFile'>
-                  Upload Proof of Address/Billing Address
-                </Label>
+                <Label htmlFor='addressFile'>Upload Proof of Address/Billing Address</Label>
                 <Input
                   id='addressFile'
                   type='file'
@@ -492,26 +472,6 @@ export function SignupForm({
                   disabled={loading}
                 />
               </div>
-              <div className='space-y-2'>
-                <Label htmlFor='confirmPassword'>Confirm Password</Label>
-                <Input
-                  id='confirmPassword'
-                  type='password'
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  disabled={loading}
-                  className={
-                    confirmPassword && password !== confirmPassword
-                      ? 'border-red-500'
-                      : ''
-                  }
-                />
-                {confirmPassword && password !== confirmPassword && (
-                  <p className='text-xs text-red-500'>Passwords do not match</p>
-                )}
-              </div>
             </>
           )}
 
@@ -543,13 +503,7 @@ export function SignupForm({
               </Button>
             ) : (
               <Button
-                disabled={
-                  loading ||
-                  !email ||
-                  !password ||
-                  !confirmPassword ||
-                  password !== confirmPassword
-                }
+                disabled={loading || !email || !password}
                 type='submit'
                 className='w-32'
               >

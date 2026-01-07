@@ -298,9 +298,9 @@ export function FacilitiesDirectory({
       }
 
       toast.success(
-        `Reservation created successfully! ${selectedTimes.length} time slot${
-          selectedTimes.length > 1 ? 's' : ''
-        } booked.`,
+        `Reservation submitted! Wait for admin approval of ${selectedTimes.length} time slot${
+            selectedTimes.length > 1 ? 's' : ''
+          }.`,
       );
       setRequestModalOpen(false);
       setRequestReason('');
