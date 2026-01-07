@@ -42,20 +42,19 @@ import { toast } from 'sonner';
 // Dynamic imports for Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
-  { ssr: false }
+  { ssr: false },
 );
 const TileLayer = dynamic(
   () => import('react-leaflet').then((mod) => mod.TileLayer),
-  { ssr: false }
+  { ssr: false },
 );
 const Marker = dynamic(
   () => import('react-leaflet').then((mod) => mod.Marker),
-  { ssr: false }
+  { ssr: false },
 );
-const Popup = dynamic(
-  () => import('react-leaflet').then((mod) => mod.Popup),
-  { ssr: false }
-);
+const Popup = dynamic(() => import('react-leaflet').then((mod) => mod.Popup), {
+  ssr: false,
+});
 
 interface FacilityDirectoryProps {
   onNavigate: (
@@ -156,7 +155,8 @@ export function FacilitiesDirectory({
       import('leaflet').then((L) => {
         delete (L.Icon.Default.prototype as any)._getIconUrl;
         L.Icon.Default.mergeOptions({
-          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+          iconUrl:
+            'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
           shadowUrl:
             'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
         });
@@ -298,7 +298,9 @@ export function FacilitiesDirectory({
       }
 
       toast.success(
-        `Reservation created successfully! ${selectedTimes.length} time slot${selectedTimes.length > 1 ? 's' : ''} booked.`,
+        `Reservation created successfully! ${selectedTimes.length} time slot${
+          selectedTimes.length > 1 ? 's' : ''
+        } booked.`,
       );
       setRequestModalOpen(false);
       setRequestReason('');
@@ -486,14 +488,17 @@ export function FacilitiesDirectory({
                     )}
                     {selectedTimes.length > 0 && (
                       <p className='text-center text-xs font-medium text-blue-600'>
-                        {selectedTimes.length} slot{selectedTimes.length > 1 ? 's' : ''} selected
+                        {selectedTimes.length} slot
+                        {selectedTimes.length > 1 ? 's' : ''} selected
                       </p>
                     )}
                   </div>
                   <ScrollArea className='h-[300px] overflow-y-auto'>
                     {loadingSlots ? (
                       <div className='flex items-center justify-center py-8'>
-                        <p className='text-sm text-muted-foreground'>Loading slots...</p>
+                        <p className='text-sm text-muted-foreground'>
+                          Loading slots...
+                        </p>
                       </div>
                     ) : (
                       <div className='grid grid-cols-2 gap-2 px-4 pb-4'>
@@ -501,7 +506,8 @@ export function FacilitiesDirectory({
                           const dateKey =
                             selectedDate?.toISOString().split('T')[0] || '';
                           const facilityKey = `${selectedFacilityForRequest?.id}-${dateKey}`;
-                          const existingBookings = bookedSlots[facilityKey] || [];
+                          const existingBookings =
+                            bookedSlots[facilityKey] || [];
                           const booking = existingBookings.find(
                             (b) => b.time === time,
                           );
@@ -511,11 +517,17 @@ export function FacilitiesDirectory({
                           return (
                             <Button
                               key={time}
-                              onClick={() => !isBooked && handleTimeToggle(time)}
+                              onClick={() =>
+                                !isBooked && handleTimeToggle(time)
+                              }
                               size='sm'
                               variant={isSelected ? 'default' : 'outline'}
                               disabled={isBooked}
-                              className={isSelected ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                              className={
+                                isSelected
+                                  ? 'bg-blue-600 hover:bg-blue-700'
+                                  : ''
+                              }
                               style={
                                 isBooked
                                   ? {
@@ -527,7 +539,9 @@ export function FacilitiesDirectory({
                                   : {}
                               }
                               title={
-                                isBooked ? `Booked by ${booking.userName}` : time
+                                isBooked
+                                  ? `Booked by ${booking.userName}`
+                                  : time
                               }
                             >
                               {time}
@@ -577,10 +591,20 @@ export function FacilitiesDirectory({
             </Button>
             <Button
               onClick={handleSubmitRequest}
-              disabled={submitting || !selectedDate || selectedTimes.length === 0}
+              disabled={
+                submitting || !selectedDate || selectedTimes.length === 0
+              }
               className='bg-blue-600 hover:bg-blue-700'
             >
-              {submitting ? 'Submitting...' : `Book ${selectedTimes.length > 0 ? `(${selectedTimes.length} slot${selectedTimes.length > 1 ? 's' : ''})` : 'Reservation'}`}
+              {submitting
+                ? 'Submitting...'
+                : `Book ${
+                    selectedTimes.length > 0
+                      ? `(${selectedTimes.length} slot${
+                          selectedTimes.length > 1 ? 's' : ''
+                        })`
+                      : 'Reservation'
+                  }`}
             </Button>
           </DialogFooter>
         </DialogContent>
