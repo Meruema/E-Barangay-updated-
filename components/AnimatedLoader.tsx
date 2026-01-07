@@ -12,20 +12,6 @@ export default function AnimatedLoader({
   return (
     <div className='flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100'>
       <div className='flex flex-col items-center space-y-6'>
-        {/* Animated spinner */}
-        <motion.div
-          className='relative w-20 h-20'
-          animate={{ rotate: 360 }}
-          transition={{
-            duration: 1.5,
-            repeat: Infinity,
-            ease: 'linear',
-          }}
-        >
-          <div className='absolute inset-0 border-4 border-blue-200 rounded-full'></div>
-          <div className='absolute inset-0 border-4 border-transparent border-t-blue-600 rounded-full'></div>
-        </motion.div>
-
         {/* Pulsing dots */}
         <div className='flex space-x-2'>
           {[0, 1, 2].map((index) => (

@@ -116,6 +116,53 @@ CREATE POLICY "Anyone can read statistics" ON statistics
   FOR SELECT USING (true);
 
 -- ============================
+-- STORAGE POLICIES FOR REQUEST DOCUMENTS
+-- ============================
+-- Allow authenticated users to upload request documents
+CREATE POLICY "Users can upload request documents"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'request-documents');
+
+-- Allow authenticated users to view request documents
+CREATE POLICY "Users can view request documents"
+ON storage.objects FOR SELECT
+TO authenticated
+USING (bucket_id = 'request-documents');
+
+-- Allow service role full access (for admin operations)
+CREATE POLICY "Service role full access to request documents"
+ON storage.objects FOR ALL
+TO service_role
+USING (bucket_id = 'request-documents');
+
+-- ============================
+-- REQUEST_DOCUMENTS TABLE POLICIES
+-- ============================
+-- Enable RLS on request_documents table
+ALTER TABLE request_documents ENABLE ROW LEVEL SECURITY;
+
+-- Users can read documents for their own requests
+CREATE POLICY "Users can read own request documents" ON request_documents
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM requests
+      WHERE requests.id = request_documents.request_id
+      AND requests.user_id = auth.uid()
+    )
+  );
+
+-- Users can create documents for their own requests
+CREATE POLICY "Users can create own request documents" ON request_documents
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM requests
+      WHERE requests.id = request_documents.request_id
+      AND requests.user_id = auth.uid()
+    )
+  );
+
+-- ============================
 -- NOTES
 -- ============================
 -- 1. After running this script, make sure to:

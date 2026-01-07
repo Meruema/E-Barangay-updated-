@@ -25,7 +25,15 @@ import {
 import { getAllRequests, updateRequestStatus } from '@/lib/api/requests';
 import { getCurrentUser } from '@/app/actions/auth';
 import { toast } from 'sonner';
-import { Clock, CheckCircle, XCircle, Eye, MessageSquare } from 'lucide-react';
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  Eye,
+  MessageSquare,
+  FileText,
+  ExternalLink,
+} from 'lucide-react';
 import Footer from '../Footer';
 
 export function AdminRequestManagement() {
@@ -38,6 +46,12 @@ export function AdminRequestManagement() {
   const [processing, setProcessing] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [adminBarangayId, setAdminBarangayId] = useState<string | null>(null);
+  const [requestDocuments, setRequestDocuments] = useState<any[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [viewDocumentsDialogOpen, setViewDocumentsDialogOpen] = useState(false);
+  const [selectedRequestForDocs, setSelectedRequestForDocs] = useState<
+    any | null
+  >(null);
 
   useEffect(() => {
     async function loadData() {
@@ -73,11 +87,45 @@ export function AdminRequestManagement() {
     loadData();
   }, []);
 
+  const fetchRequestDocuments = async (requestId: string) => {
+    setLoadingDocuments(true);
+    try {
+      console.log('Fetching documents for request:', requestId);
+      const response = await fetch(
+        `/api/request-documents?requestId=${requestId}`,
+      );
+      console.log('Response status:', response.status);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Fetched documents:', data);
+        setRequestDocuments(data.documents || []);
+      } else {
+        console.error('Response not OK:', await response.text());
+        setRequestDocuments([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch documents:', error);
+      setRequestDocuments([]);
+    } finally {
+      setLoadingDocuments(false);
+    }
+  };
+
+  const handleViewDocuments = async (request: any) => {
+    setSelectedRequestForDocs(request);
+    setRequestDocuments([]);
+    setViewDocumentsDialogOpen(true);
+    await fetchRequestDocuments(request.id);
+  };
+
   const handleAction = async (request: any, type: 'approve' | 'reject') => {
     setSelectedRequest(request);
     setActionType(type);
     setRemarks('');
+    setRequestDocuments([]);
     setActionDialogOpen(true);
+    // Fetch documents for this request
+    await fetchRequestDocuments(request.id);
   };
 
   const submitAction = async () => {
@@ -236,6 +284,14 @@ export function AdminRequestManagement() {
                             )}
                           </div>
                           <div className='flex gap-2 flex-shrink-0'>
+                            <Button
+                              onClick={() => handleViewDocuments(request)}
+                              size='sm'
+                              variant='outline'
+                            >
+                              <FileText className='w-4 h-4 mr-1' />
+                              View Documents
+                            </Button>
                             <Button
                               onClick={() => handleAction(request, 'approve')}
                               size='sm'
@@ -403,6 +459,26 @@ export function AdminRequestManagement() {
               </DialogDescription>
             </DialogHeader>
             <div className='space-y-4'>
+              {/* Request Details */}
+              {selectedRequest && (
+                <div className='space-y-2'>
+                  <div>
+                    <Label className='text-sm font-medium'>Requested by:</Label>
+                    <p className='text-sm text-muted-foreground'>
+                      {selectedRequest.user?.fullName ||
+                        selectedRequest.user?.email ||
+                        'Unknown User'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className='text-sm font-medium'>Submitted:</Label>
+                    <p className='text-sm text-muted-foreground'>
+                      {new Date(selectedRequest.submittedAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <Label htmlFor='remarks'>Remarks (Optional)</Label>
                 <Textarea
@@ -437,6 +513,104 @@ export function AdminRequestManagement() {
                   : actionType === 'approve'
                   ? 'Approve'
                   : 'Reject'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Documents Dialog */}
+        <Dialog
+          open={viewDocumentsDialogOpen}
+          onOpenChange={setViewDocumentsDialogOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Request Documents</DialogTitle>
+              <DialogDescription>
+                {selectedRequestForDocs && (
+                  <>
+                    Documents for "
+                    {selectedRequestForDocs.item?.name || 'Unknown Service'}"
+                    request
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <div className='space-y-4'>
+              {/* Request Info */}
+              {selectedRequestForDocs && (
+                <div className='space-y-2 pb-3 border-b'>
+                  <div>
+                    <Label className='text-sm font-medium'>Requested by:</Label>
+                    <p className='text-sm text-muted-foreground'>
+                      {selectedRequestForDocs.user?.fullName ||
+                        selectedRequestForDocs.user?.email ||
+                        'Unknown User'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className='text-sm font-medium'>Submitted:</Label>
+                    <p className='text-sm text-muted-foreground'>
+                      {new Date(
+                        selectedRequestForDocs.submittedAt,
+                      ).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Documents List */}
+              <div>
+                <Label className='text-sm font-medium mb-2 block'>
+                  Submitted Documents
+                </Label>
+                {loadingDocuments ? (
+                  <div className='text-sm text-muted-foreground'>
+                    Loading documents...
+                  </div>
+                ) : requestDocuments.length > 0 ? (
+                  <div className='space-y-2'>
+                    {requestDocuments.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className='flex items-center justify-between p-3 border rounded-md hover:bg-gray-50'
+                      >
+                        <div className='flex items-center space-x-2'>
+                          <FileText className='h-5 w-5 text-blue-600' />
+                          <div>
+                            <p className='text-sm font-medium'>
+                              {doc.documentName}
+                            </p>
+                            <p className='text-xs text-muted-foreground'>
+                              Uploaded{' '}
+                              {new Date(doc.uploadedAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          onClick={() => window.open(doc.documentUrl, '_blank')}
+                        >
+                          <ExternalLink className='h-4 w-4 mr-1' />
+                          Open
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className='text-sm text-muted-foreground py-4 text-center border rounded-md'>
+                    No documents submitted for this request
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant='outline'
+                onClick={() => setViewDocumentsDialogOpen(false)}
+              >
+                Close
               </Button>
             </DialogFooter>
           </DialogContent>

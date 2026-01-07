@@ -107,10 +107,13 @@ export function AdminDirectory({
     booking_rules: '',
     status: 'available',
     image_url: '', // URL from Supabase storage
+    required_documents: [] as Array<{ name: string; fileType: string }>,
   };
   const [form, setForm] = useState<any>(defaultForm);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [newDocumentName, setNewDocumentName] = useState('');
+  const [newDocumentFileType, setNewDocumentFileType] = useState('');
 
   // Fetch items, only for admin's barangay
   async function loadItems() {
@@ -197,6 +200,8 @@ export function AdminDirectory({
   // Open edit modal prefilled
   const openEdit = (item: ItemWithCategory) => {
     setSelectedItem(item);
+    const docs =
+      (item as any).requiredDocuments || (item as any).required_documents || [];
     setForm({
       name: item.name || '',
       description: item.description || '',
@@ -211,6 +216,7 @@ export function AdminDirectory({
         (item as any).booking_rules || (item as any).bookingRules || '',
       status: (item as any).status || 'available',
       image_url: (item as any).image_url || (item as any).imageUrl || '',
+      required_documents: Array.isArray(docs) ? docs : [],
     });
     setImagePreview((item as any).image_url || (item as any).imageUrl || null);
     setImageFile(null);
@@ -222,6 +228,8 @@ export function AdminDirectory({
     setForm(defaultForm);
     setImagePreview(null);
     setImageFile(null);
+    setNewDocumentName('');
+    setNewDocumentFileType('');
     setIsAddOpen(true);
   };
 
@@ -346,9 +354,16 @@ export function AdminDirectory({
         status: form.status,
       };
 
-      // if facility and image selected, upload to Supabase
+      // Add required documents for services only
       const categoryObj = categories?.find((c) => c.id === form.category_id);
       const categoryName = categoryObj?.name?.toLowerCase() || '';
+      const isService = categoryName !== 'facility';
+
+      if (isService) {
+        payload.required_documents = form.required_documents || [];
+      }
+
+      // if facility and image selected, upload to Supabase
       if (
         categoryName === 'facility' ||
         form.category_id === 'facility' ||
@@ -500,6 +515,12 @@ export function AdminDirectory({
         booking_rules: form.booking_rules?.trim() || '',
         status: form.status,
       };
+
+      // Add required documents for services only
+      const isService = !isFacility;
+      if (isService) {
+        payload.required_documents = form.required_documents || [];
+      }
 
       if (isFacility) {
         if (imageFile) {
@@ -1055,6 +1076,144 @@ export function AdminDirectory({
               </div>
             </div>
 
+            {/* Show required documents for services */}
+            {form.category_id &&
+              categories
+                ?.find((c) => c.id === form.category_id)
+                ?.name?.toLowerCase() !== 'facility' && (
+                <div className='border rounded-lg p-4 bg-muted/50 space-y-3'>
+                  <div>
+                    <Label className='text-base font-semibold'>
+                      Required Documents (Max 5)
+                    </Label>
+                    <p className='text-xs text-muted-foreground mt-1'>
+                      Specify documents needed and their allowed file types
+                    </p>
+                  </div>
+
+                  {/* Add new document button */}
+                  {(form.required_documents?.length || 0) < 5 && (
+                    <div className='space-y-2 border rounded-lg p-3 bg-background'>
+                      <div className='grid grid-cols-2 gap-2'>
+                        <div>
+                          <Label className='text-xs'>Document Name</Label>
+                          <Input
+                            placeholder='e.g., Cedula'
+                            value={newDocumentName}
+                            onChange={(e) => setNewDocumentName(e.target.value)}
+                            className='mt-1'
+                          />
+                        </div>
+                        <div>
+                          <Label className='text-xs'>File Type</Label>
+                          <Select
+                            value={newDocumentFileType}
+                            onValueChange={setNewDocumentFileType}
+                          >
+                            <SelectTrigger className='mt-1'>
+                              <SelectValue placeholder='Select file type' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value='Image (PNG, JPG, JPEG)'>
+                                Image (PNG, JPG, JPEG)
+                              </SelectItem>
+                              <SelectItem value='PDF'>PDF</SelectItem>
+                              <SelectItem value='Document (DOCX, DOC)'>
+                                Document (DOCX, DOC)
+                              </SelectItem>
+                              <SelectItem value='Spreadsheet (XLSX, XLS)'>
+                                Spreadsheet (XLSX, XLS)
+                              </SelectItem>
+                              <SelectItem value='Any File Type'>
+                                Any File Type
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <Button
+                        type='button'
+                        size='sm'
+                        className='w-full'
+                        onClick={() => {
+                          if (
+                            newDocumentName.trim() &&
+                            newDocumentFileType.trim()
+                          ) {
+                            setForm({
+                              ...form,
+                              required_documents: [
+                                ...(form.required_documents || []),
+                                {
+                                  name: newDocumentName.trim(),
+                                  fileType: newDocumentFileType.trim(),
+                                },
+                              ],
+                            });
+                            setNewDocumentName('');
+                            setNewDocumentFileType('');
+                          }
+                        }}
+                      >
+                        Add Document
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* List of added documents */}
+                  {(form.required_documents || []).length > 0 && (
+                    <div className='space-y-2'>
+                      <Label className='text-sm'>Added Documents:</Label>
+                      {(form.required_documents || []).map(
+                        (
+                          doc: { name: string; fileType: string },
+                          idx: number,
+                        ) => (
+                          <div
+                            key={idx}
+                            className='flex items-center gap-2 p-2 border rounded bg-background'
+                          >
+                            <div className='flex-1 grid grid-cols-2 gap-2'>
+                              <div>
+                                <span className='text-xs text-muted-foreground'>
+                                  Name:
+                                </span>
+                                <p className='text-sm font-medium'>
+                                  {doc.name}
+                                </p>
+                              </div>
+                              <div>
+                                <span className='text-xs text-muted-foreground'>
+                                  File Type:
+                                </span>
+                                <p className='text-sm font-medium'>
+                                  {doc.fileType}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              type='button'
+                              size='sm'
+                              variant='destructive'
+                              onClick={() => {
+                                const newDocs = [...form.required_documents];
+                                newDocs.splice(idx, 1);
+                                setForm({
+                                  ...form,
+                                  required_documents: newDocs,
+                                });
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
             {/* Show image upload for facilities */}
             {(form.category_id === 'facility' ||
               categories
@@ -1212,6 +1371,144 @@ export function AdminDirectory({
                 </Select>
               </div>
             </div>
+
+            {/* Show required documents for services */}
+            {form.category_id &&
+              categories
+                ?.find((c) => c.id === form.category_id)
+                ?.name?.toLowerCase() !== 'facility' && (
+                <div className='border rounded-lg p-4 bg-muted/50 space-y-3'>
+                  <div>
+                    <Label className='text-base font-semibold'>
+                      Required Documents (Max 5)
+                    </Label>
+                    <p className='text-xs text-muted-foreground mt-1'>
+                      Specify documents needed and their allowed file types
+                    </p>
+                  </div>
+
+                  {/* Add new document button */}
+                  {(form.required_documents?.length || 0) < 5 && (
+                    <div className='space-y-2 border rounded-lg p-3 bg-background'>
+                      <div className='grid grid-cols-2 gap-2'>
+                        <div>
+                          <Label className='text-xs'>Document Name</Label>
+                          <Input
+                            placeholder='e.g., Cedula'
+                            value={newDocumentName}
+                            onChange={(e) => setNewDocumentName(e.target.value)}
+                            className='mt-1'
+                          />
+                        </div>
+                        <div>
+                          <Label className='text-xs'>File Type</Label>
+                          <Select
+                            value={newDocumentFileType}
+                            onValueChange={setNewDocumentFileType}
+                          >
+                            <SelectTrigger className='mt-1'>
+                              <SelectValue placeholder='Select file type' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value='Image (PNG, JPG, JPEG)'>
+                                Image (PNG, JPG, JPEG)
+                              </SelectItem>
+                              <SelectItem value='PDF'>PDF</SelectItem>
+                              <SelectItem value='Document (DOCX, DOC)'>
+                                Document (DOCX, DOC)
+                              </SelectItem>
+                              <SelectItem value='Spreadsheet (XLSX, XLS)'>
+                                Spreadsheet (XLSX, XLS)
+                              </SelectItem>
+                              <SelectItem value='Any File Type'>
+                                Any File Type
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <Button
+                        type='button'
+                        size='sm'
+                        className='w-full'
+                        onClick={() => {
+                          if (
+                            newDocumentName.trim() &&
+                            newDocumentFileType.trim()
+                          ) {
+                            setForm({
+                              ...form,
+                              required_documents: [
+                                ...(form.required_documents || []),
+                                {
+                                  name: newDocumentName.trim(),
+                                  fileType: newDocumentFileType.trim(),
+                                },
+                              ],
+                            });
+                            setNewDocumentName('');
+                            setNewDocumentFileType('');
+                          }
+                        }}
+                      >
+                        Add Document
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* List of added documents */}
+                  {(form.required_documents || []).length > 0 && (
+                    <div className='space-y-2'>
+                      <Label className='text-sm'>Added Documents:</Label>
+                      {(form.required_documents || []).map(
+                        (
+                          doc: { name: string; fileType: string },
+                          idx: number,
+                        ) => (
+                          <div
+                            key={idx}
+                            className='flex items-center gap-2 p-2 border rounded bg-background'
+                          >
+                            <div className='flex-1 grid grid-cols-2 gap-2'>
+                              <div>
+                                <span className='text-xs text-muted-foreground'>
+                                  Name:
+                                </span>
+                                <p className='text-sm font-medium'>
+                                  {doc.name}
+                                </p>
+                              </div>
+                              <div>
+                                <span className='text-xs text-muted-foreground'>
+                                  File Type:
+                                </span>
+                                <p className='text-sm font-medium'>
+                                  {doc.fileType}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              type='button'
+                              size='sm'
+                              variant='destructive'
+                              onClick={() => {
+                                const newDocs = [...form.required_documents];
+                                newDocs.splice(idx, 1);
+                                setForm({
+                                  ...form,
+                                  required_documents: newDocs,
+                                });
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
             {(form.category_id === 'facility' ||
               categories

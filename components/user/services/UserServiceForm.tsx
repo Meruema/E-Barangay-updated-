@@ -1,22 +1,43 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { getItemById } from "@/lib/api/items";
-import { createRequest } from "@/lib/api/requests";
-import { ItemWithCategory } from "@/lib/database.types";
-import { createClient } from "@/lib/supabase/client";
+import { getItemById } from '@/lib/api/items';
+import { createRequest } from '@/lib/api/requests';
+import { ItemWithCategory } from '@/lib/database.types';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle2, AlertCircle, Eye, Loader2, Save } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  CheckCircle2,
+  AlertCircle,
+  Eye,
+  Loader2,
+  Save,
+  Upload,
+  FileText,
+} from 'lucide-react';
 
 interface ServiceFormProps {
-  service: string | null; 
-  onNavigate: (view: 'dashboard' | 'services' | 'facilities' | 'application' | 'requests') => void;
+  service: string | null;
+  onNavigate: (
+    view: 'dashboard' | 'services' | 'facilities' | 'application' | 'requests',
+  ) => void;
+}
+
+interface RequiredDocument {
+  name: string;
+  fileType: string;
 }
 
 export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
@@ -25,15 +46,58 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitStatus, setSubmitStatus] = useState<
+    'idle' | 'success' | 'error'
+  >('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [isDirty, setIsDirty] = useState(false);
+  const [documentFiles, setDocumentFiles] = useState<
+    Record<string, File | null>
+  >({});
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   // Parse requirements from item
-  const bookingRules = item ? ((item as any).bookingRules || (item as any).booking_rules) : null;
+  const bookingRules = item
+    ? (item as any).bookingRules || (item as any).booking_rules
+    : null;
   const requirements = bookingRules
-    ? bookingRules.split(',').map((r: string) => r.trim()).filter(Boolean)
-    : ['Name', 'Contact Number', 'Purpose'];
+    ? bookingRules
+        .split(',')
+        .map((r: string) => r.trim())
+        .filter((r: string) => {
+          const lower = r.toLowerCase();
+          return !lower.includes('purpose') && !lower.includes('reason');
+        })
+    : ['Name', 'Contact Number'];
+
+  // Get required documents from item
+  const requiredDocuments: RequiredDocument[] = (() => {
+    if (!item) return [];
+
+    const docs = (item as any).requiredDocuments;
+    console.log('Raw requiredDocuments from item:', docs);
+    console.log('Type of requiredDocuments:', typeof docs);
+
+    // Handle JSONB which might be a string
+    if (typeof docs === 'string') {
+      try {
+        return JSON.parse(docs);
+      } catch (e) {
+        console.error('Failed to parse requiredDocuments:', e);
+        return [];
+      }
+    }
+
+    // Already an array
+    if (Array.isArray(docs)) {
+      return docs;
+    }
+
+    return [];
+  })();
+
+  console.log('Item state:', item);
+  console.log('Parsed required documents:', requiredDocuments);
 
   // Create dynamic form schema
   const defaultValues = requirements.reduce((acc: any, req: string) => {
@@ -41,16 +105,16 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
     return acc;
   }, {});
 
-  const { 
-    register, 
-    handleSubmit, 
-    watch, 
+  const {
+    register,
+    handleSubmit,
+    watch,
     formState: { errors, isValid },
     reset,
-    setValue
+    setValue,
   } = useForm({
     mode: 'onChange',
-    defaultValues
+    defaultValues,
   });
 
   const formValues = watch();
@@ -65,6 +129,11 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
       try {
         const itemData = await getItemById(service);
         setItem(itemData);
+        console.log('Loaded item:', itemData);
+        console.log(
+          'Required documents:',
+          (itemData as any)?.requiredDocuments,
+        );
       } catch (error) {
         console.error('Failed to load item:', error);
       } finally {
@@ -74,7 +143,9 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
 
     async function loadUser() {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         setUserId(user.id);
       }
@@ -88,7 +159,10 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
   useEffect(() => {
     if (isDirty && service && userId) {
       const autoSaveTimer = setTimeout(() => {
-        localStorage.setItem(`draft_${service}_${userId}`, JSON.stringify(formValues));
+        localStorage.setItem(
+          `draft_${service}_${userId}`,
+          JSON.stringify(formValues),
+        );
         console.log('Draft auto-saved');
       }, 2000); // Auto-save after 2 seconds of inactivity
 
@@ -103,7 +177,7 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
       if (savedDraft) {
         try {
           const draftData = JSON.parse(savedDraft);
-          Object.keys(draftData).forEach(key => {
+          Object.keys(draftData).forEach((key) => {
             setValue(key, draftData[key]);
           });
           setIsDirty(true);
@@ -122,12 +196,27 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
 
   const onSubmit = async (data: any) => {
     if (!item || !userId) {
-      alert("Please log in to submit a request");
+      alert('Please log in to submit a request');
+      return;
+    }
+
+    // Check if all required documents are uploaded
+    const missingDocs = requiredDocuments.filter(
+      (doc) => !documentFiles[doc.name],
+    );
+    if (missingDocs.length > 0) {
+      setErrorMessage(
+        `Please upload all required documents: ${missingDocs
+          .map((d) => d.name)
+          .join(', ')}`,
+      );
+      setSubmitStatus('error');
       return;
     }
 
     try {
       setSubmitting(true);
+      setUploadingFiles(true);
       setSubmitStatus('idle');
       setErrorMessage('');
 
@@ -135,14 +224,63 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
       const reason = Object.entries(data)
         .map(([key, value]) => `${key}: ${value}`)
         .join(', ');
-      
-      await createRequest(userId, item.id, reason);
-      
+
+      // Create the request first
+      const requestResponse = await createRequest(userId, item.id, reason);
+      const requestId = requestResponse.id;
+
+      // Upload documents to Supabase storage
+      const supabase = createClient();
+      const uploadedDocs = [];
+
+      for (const doc of requiredDocuments) {
+        const file = documentFiles[doc.name];
+        if (file) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${requestId}/${doc.name.replace(
+            /\s+/g,
+            '_',
+          )}_${Date.now()}.${fileExt}`;
+
+          const { data: uploadData, error: uploadError } =
+            await supabase.storage
+              .from('request-documents')
+              .upload(fileName, file);
+
+          if (uploadError) {
+            throw new Error(
+              `Failed to upload ${doc.name}: ${uploadError.message}`,
+            );
+          }
+
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from('request-documents').getPublicUrl(fileName);
+
+          uploadedDocs.push({
+            requestId,
+            itemId: item.id,
+            documentName: doc.name,
+            documentUrl: publicUrl,
+          });
+        }
+      }
+
+      // Save document records to database
+      if (uploadedDocs.length > 0) {
+        await fetch('/api/request-documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documents: uploadedDocs }),
+        });
+      }
+
       setSubmitStatus('success');
-      // Clear draft after successful submission
+      // Clear draft and files after successful submission
       localStorage.removeItem(`draft_${service}_${userId}`);
       reset();
       setIsDirty(false);
+      setDocumentFiles({});
 
       // Redirect after 2 seconds
       setTimeout(() => {
@@ -151,10 +289,51 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
     } catch (error) {
       console.error('Failed to submit request:', error);
       setSubmitStatus('error');
-      setErrorMessage('Failed to submit application. Please try again.');
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Failed to submit application. Please try again.',
+      );
     } finally {
       setSubmitting(false);
+      setUploadingFiles(false);
     }
+  };
+
+  const handleFileChange = (docName: string, file: File | null) => {
+    setDocumentFiles((prev) => ({
+      ...prev,
+      [docName]: file,
+    }));
+  };
+
+  const getAcceptedFileTypes = (fileType: string): string => {
+    const lower = fileType.toLowerCase();
+    if (
+      lower.includes('image') ||
+      lower.includes('png') ||
+      lower.includes('jpg')
+    ) {
+      return 'image/png,image/jpeg,image/jpg';
+    }
+    if (lower.includes('pdf')) {
+      return 'application/pdf';
+    }
+    if (
+      lower.includes('document') ||
+      lower.includes('docx') ||
+      lower.includes('doc')
+    ) {
+      return 'application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+    if (
+      lower.includes('spreadsheet') ||
+      lower.includes('xlsx') ||
+      lower.includes('xls')
+    ) {
+      return 'application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    }
+    return '*/*';
   };
 
   const clearDraft = () => {
@@ -168,63 +347,66 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
   // Get validation rules based on field name
   const getValidationRules = (fieldName: string) => {
     const lowerFieldName = fieldName.toLowerCase();
-    
+
     if (lowerFieldName.includes('email')) {
       return {
         required: `${fieldName} is required`,
         pattern: {
           value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-          message: 'Invalid email address'
-        }
+          message: 'Invalid email address',
+        },
       };
     }
-    
-    if (lowerFieldName.includes('phone') || lowerFieldName.includes('contact')) {
+
+    if (
+      lowerFieldName.includes('phone') ||
+      lowerFieldName.includes('contact')
+    ) {
       return {
         required: `${fieldName} is required`,
         pattern: {
           value: /^[0-9+\-\s()]+$/,
-          message: 'Invalid phone number format'
+          message: 'Invalid phone number format',
         },
         minLength: {
           value: 10,
-          message: 'Phone number must be at least 10 digits'
-        }
+          message: 'Phone number must be at least 10 digits',
+        },
       };
     }
-    
+
     if (lowerFieldName.includes('name')) {
       return {
         required: `${fieldName} is required`,
         minLength: {
           value: 2,
-          message: `${fieldName} must be at least 2 characters`
-        }
+          message: `${fieldName} must be at least 2 characters`,
+        },
       };
     }
-    
+
     // Default validation
     return {
       required: `${fieldName} is required`,
       minLength: {
         value: 2,
-        message: `${fieldName} must be at least 2 characters`
-      }
+        message: `${fieldName} must be at least 2 characters`,
+      },
     };
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='text-lg'>Loading...</div>
       </div>
     );
   }
 
   if (!item) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Service not found.</div>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='text-lg'>Service not found.</div>
       </div>
     );
   }
@@ -232,44 +414,77 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
   // Preview View
   if (showPreview) {
     return (
-      <Card className="max-w-xl mx-auto m-5">
+      <Card className='max-w-xl mx-auto m-5'>
         <CardHeader>
           <CardTitle>Preview Your Request</CardTitle>
-          <CardDescription>Review your information before submitting</CardDescription>
+          <CardDescription>
+            Review your information before submitting
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <h3 className="font-semibold text-blue-900 mb-1">{item.name}</h3>
-            <p className="text-sm text-blue-700">{item.description}</p>
+        <CardContent className='space-y-4'>
+          <div className='bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4'>
+            <h3 className='font-semibold text-blue-900 mb-1'>{item.name}</h3>
+            <p className='text-sm text-blue-700'>{item.description}</p>
           </div>
 
-          <div className="space-y-3">
+          <div className='space-y-3'>
             {Object.entries(formValues).map(([key, value]) => (
-              <div key={key} className="flex justify-between border-b pb-2">
-                <span className="font-semibold">{key}:</span>
-                <span className="text-gray-700">{value as string}</span>
+              <div key={key} className='flex justify-between border-b pb-2'>
+                <span className='font-semibold'>{key}:</span>
+                <span className='text-gray-700'>{value as string}</span>
               </div>
             ))}
           </div>
 
-          <div className="flex gap-3 pt-4">
+          {/* Documents Preview */}
+          {requiredDocuments.length > 0 && (
+            <div className='space-y-3 border-t pt-4'>
+              <h4 className='font-semibold'>Documents to Upload:</h4>
+              {requiredDocuments.map((doc, idx) => (
+                <div
+                  key={idx}
+                  className='flex justify-between items-center border-b pb-2'
+                >
+                  <span className='font-semibold'>{doc.name}:</span>
+                  <span className='text-sm text-gray-700'>
+                    {documentFiles[doc.name] ? (
+                      <span className='text-green-600 flex items-center gap-1'>
+                        <CheckCircle2 className='h-4 w-4' />
+                        {documentFiles[doc.name]?.name}
+                      </span>
+                    ) : (
+                      <span className='text-red-500'>Not uploaded</span>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className='flex gap-3 pt-4'>
+            {uploadingFiles && (
+              <Alert className='mb-4'>
+                <Upload className='h-4 w-4 animate-pulse' />
+                <AlertDescription>Uploading documents...</AlertDescription>
+              </Alert>
+            )}
             <Button
-              type="button"
-              variant="outline"
+              type='button'
+              variant='outline'
               onClick={() => setShowPreview(false)}
-              className="flex-1"
+              className='flex-1'
             >
-               Back to Edit
+              Back to Edit
             </Button>
             <Button
-              type="button"
+              type='button'
               onClick={handleSubmit(onSubmit)}
               disabled={submitting}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              className='flex-1 bg-blue-600 hover:bg-blue-700'
             >
               {submitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                   Submitting...
                 </>
               ) : (
@@ -284,30 +499,33 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
 
   // Main Form View
   return (
-    <Card className="max-w-xl mx-auto m-5">
+    <Card className='max-w-xl mx-auto m-5'>
       <CardHeader>
-        <CardTitle className="text-2xl">{item.name} Application</CardTitle>
+        <CardTitle className='text-2xl'>{item.name} Application</CardTitle>
         {item.description && (
           <CardDescription>{item.description}</CardDescription>
         )}
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleSubmit(() => setShowPreview(true))} className="space-y-4">
+        <form
+          onSubmit={handleSubmit(() => setShowPreview(true))}
+          className='space-y-4'
+        >
           {/* Success/Error Messages */}
           {submitStatus === 'success' && (
-            <Alert className="bg-green-50 border-green-200">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
+            <Alert className='bg-green-50 border-green-200'>
+              <CheckCircle2 className='h-4 w-4 text-green-600' />
+              <AlertDescription className='text-green-800'>
                 Request submitted successfully! Redirecting to your requests...
               </AlertDescription>
             </Alert>
           )}
 
           {submitStatus === 'error' && (
-            <Alert className="bg-red-50 border-red-200">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">
+            <Alert className='bg-red-50 border-red-200'>
+              <AlertCircle className='h-4 w-4 text-red-600' />
+              <AlertDescription className='text-red-800'>
                 {errorMessage}
               </AlertDescription>
             </Alert>
@@ -315,14 +533,15 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
 
           {/* Dynamic Form Fields */}
           {requirements.map((req: string, idx: number) => {
-            const isTextArea = req.toLowerCase().includes('address') || 
-                              req.toLowerCase().includes('purpose') ||
-                              req.toLowerCase().includes('reason');
-            
+            const isTextArea =
+              req.toLowerCase().includes('address') ||
+              req.toLowerCase().includes('purpose') ||
+              req.toLowerCase().includes('reason');
+
             return (
-              <div key={idx} className="space-y-2">
+              <div key={idx} className='space-y-2'>
                 <Label htmlFor={req}>
-                  {req} <span className="text-red-500">*</span>
+                  {req} <span className='text-red-500'>*</span>
                 </Label>
                 {isTextArea ? (
                   <Textarea
@@ -341,22 +560,76 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
                   />
                 )}
                 {errors[req] && (
-                  <p className="text-sm text-red-500">{errors[req]?.message as string}</p>
+                  <p className='text-sm text-red-500'>
+                    {errors[req]?.message as string}
+                  </p>
                 )}
               </div>
             );
           })}
 
+          {/* Required Documents Upload */}
+          {requiredDocuments.length > 0 && (
+            <div className='space-y-4 pt-4 border-t'>
+              <div>
+                <h3 className='font-semibold text-lg mb-2'>
+                  Required Documents
+                </h3>
+                <p className='text-sm text-gray-600 mb-4'>
+                  Please upload the following documents:
+                </p>
+              </div>
+
+              {requiredDocuments.map((doc, idx) => (
+                <div key={idx} className='space-y-2'>
+                  <Label
+                    htmlFor={`doc-${idx}`}
+                    className='flex items-center gap-2'
+                  >
+                    <FileText className='h-4 w-4' />
+                    {doc.name} <span className='text-red-500'>*</span>
+                    <span className='text-xs text-gray-500'>
+                      ({doc.fileType})
+                    </span>
+                  </Label>
+                  <Input
+                    id={`doc-${idx}`}
+                    type='file'
+                    accept={getAcceptedFileTypes(doc.fileType)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      handleFileChange(doc.name, file);
+                    }}
+                    className={
+                      !documentFiles[doc.name]
+                        ? 'border-red-300'
+                        : 'border-green-300'
+                    }
+                  />
+                  {documentFiles[doc.name] && (
+                    <p className='text-sm text-green-600 flex items-center gap-1'>
+                      <CheckCircle2 className='h-3 w-3' />
+                      {documentFiles[doc.name]?.name} selected
+                    </p>
+                  )}
+                  {!documentFiles[doc.name] && (
+                    <p className='text-sm text-gray-500'>No file selected</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Draft Status */}
           {isDirty && (
             <Alert>
-              <Save className="h-4 w-4" />
-              <AlertDescription className="flex justify-between items-center">
-                <span className="text-sm">✅ Draft auto-saved</span>
+              <Save className='h-4 w-4' />
+              <AlertDescription className='flex justify-between items-center'>
+                <span className='text-sm'>✅ Draft auto-saved</span>
                 <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
+                  type='button'
+                  variant='ghost'
+                  size='sm'
                   onClick={clearDraft}
                 >
                   Clear Draft
@@ -366,23 +639,23 @@ export function ServiceForm({ service, onNavigate }: ServiceFormProps) {
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className='flex gap-3 pt-4'>
             <Button
-              type="button"
-              variant="outline"
+              type='button'
+              variant='outline'
               onClick={() => onNavigate('services')}
-              className="flex-1"
+              className='flex-1'
               disabled={submitting}
             >
               Back
             </Button>
 
             <Button
-              type="submit"
+              type='submit'
               disabled={!isValid || submitting}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              className='flex-1 bg-blue-600 hover:bg-blue-700'
             >
-              <Eye className="mr-2 h-4 w-4" />
+              <Eye className='mr-2 h-4 w-4' />
               Preview Request
             </Button>
           </div>

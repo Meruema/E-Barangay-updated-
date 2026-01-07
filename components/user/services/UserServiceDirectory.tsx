@@ -32,6 +32,7 @@ import {
 import { useItems, useCategories } from '@/lib/hooks/useItems';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { createRequest } from '@/lib/api/requests';
+import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import {
   FileCheck,
@@ -46,9 +47,12 @@ import {
   User,
   Shield,
   Lock,
+  FileText,
+  Upload,
+  CheckCircle2,
 } from 'lucide-react';
 
-import { Search, Clock, FileText, Star, Calendar } from 'lucide-react';
+import { Search, Clock, Star, Calendar } from 'lucide-react';
 
 import {
   Carousel,
@@ -113,6 +117,27 @@ export function ServiceDirectory({
     useState<any>(null);
   const [requestReason, setRequestReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [documentFiles, setDocumentFiles] = useState<
+    Record<string, File | null>
+  >({});
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+
+  // Get required documents from selected service
+  const requiredDocuments: Array<{ name: string; fileType: string }> = (() => {
+    if (!selectedServiceForRequest) return [];
+    const docs = selectedServiceForRequest.requiredDocuments;
+    if (typeof docs === 'string') {
+      try {
+        return JSON.parse(docs);
+      } catch (e) {
+        return [];
+      }
+    }
+    if (Array.isArray(docs)) {
+      return docs;
+    }
+    return [];
+  })();
 
   const categoryOptions = useMemo(() => {
     const allOption = {
@@ -170,18 +195,125 @@ export function ServiceDirectory({
   const handleSubmitRequest = async () => {
     if (!user || !selectedServiceForRequest) return;
 
+    // Check if all required documents are uploaded
+    const missingDocs = requiredDocuments.filter(
+      (doc) => !documentFiles[doc.name],
+    );
+    if (missingDocs.length > 0) {
+      toast.error(
+        `Please upload all required documents: ${missingDocs
+          .map((d) => d.name)
+          .join(', ')}`,
+      );
+      return;
+    }
+
     setSubmitting(true);
+    setUploadingFiles(true);
     try {
-      await createRequest(user.id, selectedServiceForRequest.id, requestReason);
+      // Create the request first
+      const requestResponse = await createRequest(
+        user.id,
+        selectedServiceForRequest.id,
+        requestReason,
+      );
+      const requestId = requestResponse.id;
+
+      // Upload documents to Supabase storage
+      const supabase = createClient();
+      const uploadedDocs = [];
+
+      for (const doc of requiredDocuments) {
+        const file = documentFiles[doc.name];
+        if (file) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${requestId}/${doc.name.replace(
+            /\s+/g,
+            '_',
+          )}_${Date.now()}.${fileExt}`;
+
+          const { data: uploadData, error: uploadError } =
+            await supabase.storage
+              .from('request-documents')
+              .upload(fileName, file);
+
+          if (uploadError) {
+            throw new Error(
+              `Failed to upload ${doc.name}: ${uploadError.message}`,
+            );
+          }
+
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from('request-documents').getPublicUrl(fileName);
+
+          uploadedDocs.push({
+            requestId,
+            itemId: selectedServiceForRequest.id,
+            documentName: doc.name,
+            documentUrl: publicUrl,
+          });
+        }
+      }
+
+      // Save document records to database
+      if (uploadedDocs.length > 0) {
+        await fetch('/api/request-documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documents: uploadedDocs }),
+        });
+      }
+
       toast.success('Request submitted successfully!');
       setRequestModalOpen(false);
       setRequestReason('');
+      setDocumentFiles({});
     } catch (error) {
       console.error('Failed to submit request:', error);
-      toast.error('Failed to submit request');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to submit request',
+      );
     } finally {
       setSubmitting(false);
+      setUploadingFiles(false);
     }
+  };
+
+  const handleFileChange = (docName: string, file: File | null) => {
+    setDocumentFiles((prev) => ({
+      ...prev,
+      [docName]: file,
+    }));
+  };
+
+  const getAcceptedFileTypes = (fileType: string): string => {
+    const lower = fileType.toLowerCase();
+    if (
+      lower.includes('image') ||
+      lower.includes('png') ||
+      lower.includes('jpg')
+    ) {
+      return 'image/png,image/jpeg,image/jpg';
+    }
+    if (lower.includes('pdf')) {
+      return 'application/pdf';
+    }
+    if (
+      lower.includes('document') ||
+      lower.includes('docx') ||
+      lower.includes('doc')
+    ) {
+      return 'application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+    if (
+      lower.includes('spreadsheet') ||
+      lower.includes('xlsx') ||
+      lower.includes('xls')
+    ) {
+      return 'application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    }
+    return '*/*';
   };
 
   return (
@@ -370,18 +502,53 @@ export function ServiceDirectory({
                     {selectedServiceForRequest.description || 'N/A'}
                   </p>
                 </div>
+
+                {/* Required Documents Section */}
+                {requiredDocuments.length > 0 && (
+                  <div className='space-y-3'>
+                    <Label className='text-sm font-medium'>
+                      Required Documents
+                    </Label>
+                    {requiredDocuments.map((doc) => (
+                      <div key={doc.name} className='space-y-2'>
+                        <div className='flex items-center justify-between'>
+                          <div className='flex items-center space-x-2'>
+                            <FileText className='h-4 w-4 text-gray-500' />
+                            <span className='text-sm font-medium'>
+                              {doc.name}
+                            </span>
+                            <span className='text-xs text-gray-500'>
+                              ({doc.fileType})
+                            </span>
+                          </div>
+                          {documentFiles[doc.name] && (
+                            <CheckCircle2 className='h-4 w-4 text-green-500' />
+                          )}
+                        </div>
+                        <div className='flex items-center space-x-2'>
+                          <Input
+                            type='file'
+                            accept={getAcceptedFileTypes(doc.fileType)}
+                            onChange={(e) =>
+                              handleFileChange(
+                                doc.name,
+                                e.target.files?.[0] || null,
+                              )
+                            }
+                            className='text-sm'
+                          />
+                          {documentFiles[doc.name] && (
+                            <span className='text-xs text-green-600'>
+                              {documentFiles[doc.name]?.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </>
             )}
-            <div>
-              <Label htmlFor='reason'>Reason for Request (Optional)</Label>
-              <Textarea
-                id='reason'
-                placeholder='Please provide details about your request...'
-                value={requestReason}
-                onChange={(e) => setRequestReason(e.target.value)}
-                rows={4}
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button
@@ -393,7 +560,10 @@ export function ServiceDirectory({
             </Button>
             <Button
               onClick={handleSubmitRequest}
-              disabled={submitting}
+              disabled={
+                submitting ||
+                requiredDocuments.some((doc) => !documentFiles[doc.name])
+              }
               className='bg-blue-600 hover:bg-blue-700'
             >
               {submitting ? 'Submitting...' : 'Submit Request'}

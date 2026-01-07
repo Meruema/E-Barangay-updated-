@@ -102,7 +102,17 @@ export async function POST(request: NextRequest) {
     const session = await getSession();
     const currentUser = session?.user;
     const body = await request.json();
-    const { category_id, booking_rules, image_url, payment, ...data } = body;
+    const {
+      category_id,
+      booking_rules,
+      image_url,
+      payment,
+      required_documents,
+      ...data
+    } = body;
+
+    console.log('Received body:', body);
+    console.log('Required documents:', required_documents);
 
     // Transform snake_case fields to camelCase for Prisma
     const createData: any = { ...data };
@@ -113,6 +123,14 @@ export async function POST(request: NextRequest) {
 
     if (image_url !== undefined) {
       createData.imageUrl = image_url;
+    }
+
+    if (required_documents !== undefined) {
+      // Ensure it's properly serialized as JSON
+      createData.requiredDocuments =
+        Array.isArray(required_documents) && required_documents.length > 0
+          ? required_documents
+          : [];
     }
 
     if (category_id !== undefined) {
@@ -127,10 +145,10 @@ export async function POST(request: NextRequest) {
     if (currentUser && currentUser.role === 'ADMIN') {
       const admin = await prisma.user.findUnique({
         where: { id: currentUser.id },
-        select: { adminBarangayId: true },
+        select: { barangayId: true },
       });
-      if (admin?.adminBarangayId) {
-        createData.barangay = { connect: { id: admin.adminBarangayId } };
+      if (admin?.barangayId) {
+        createData.barangay = { connect: { id: admin.barangayId } };
       } else {
         return NextResponse.json(
           { error: 'Admin has no assigned barangay' },
@@ -161,8 +179,15 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, category_id, booking_rules, image_url, payment, ...data } =
-      body;
+    const {
+      id,
+      category_id,
+      booking_rules,
+      image_url,
+      payment,
+      required_documents,
+      ...data
+    } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Missing item ID' }, { status: 400 });
@@ -177,6 +202,13 @@ export async function PATCH(request: NextRequest) {
 
     if (image_url !== undefined) {
       updateData.imageUrl = image_url;
+    }
+
+    if (required_documents !== undefined) {
+      updateData.requiredDocuments =
+        Array.isArray(required_documents) && required_documents.length > 0
+          ? required_documents
+          : [];
     }
 
     if (category_id !== undefined) {

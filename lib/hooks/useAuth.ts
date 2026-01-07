@@ -30,10 +30,7 @@ export function useAuth() {
 
     fetchUser();
 
-    // Re-fetch user periodically to check session validity
-    const interval = setInterval(fetchUser, 60000); // Check every minute
-
-    return () => clearInterval(interval);
+    // Only check on mount, not periodically
   }, []);
 
   return { user, loading };

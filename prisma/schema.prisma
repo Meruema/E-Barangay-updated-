@@ -56,22 +56,24 @@ model Category {
 }
 
 model Item {
-  id           String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name         String
-  description  String?
-  categoryId   String?      @map("category_id") @db.Uuid
-  type         String?
-  status       item_status? @default(available)
-  imageUrl     String?      @map("image_url")
-  availability String?
-  bookingRules String?      @map("booking_rules")
-  createdAt    DateTime?    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime?    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  barangayId   String?      @db.Uuid
-  barangay     Barangay?    @relation(fields: [barangayId], references: [id])
-  category     Category?    @relation(fields: [categoryId], references: [id], onUpdate: NoAction)
-  requests     Request[]
-  statistics   Statistics[]
+  id                 String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name               String
+  description        String?
+  categoryId         String?             @map("category_id") @db.Uuid
+  type               String?
+  status             item_status?        @default(available)
+  imageUrl           String?             @map("image_url")
+  availability       String?
+  bookingRules       String?             @map("booking_rules")
+  requiredDocuments  Json?               @default("[]") @map("required_documents")
+  createdAt          DateTime?           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime?           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  barangayId         String?             @db.Uuid
+  barangay           Barangay?           @relation(fields: [barangayId], references: [id])
+  category           Category?           @relation(fields: [categoryId], references: [id], onUpdate: NoAction)
+  requests           Request[]
+  statistics         Statistics[]
+  requestDocuments   RequestDocument[]
 
   @@index([categoryId], map: "idx_items_category_id")
   @@index([barangayId], map: "idx_items_barangay_id")
@@ -102,21 +104,37 @@ model AccountSuspension {
 }
 
 model Request {
-  id          String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId      String?         @map("user_id") @db.Uuid
-  itemId      String?         @map("item_id") @db.Uuid
-  status      request_status? @default(pending)
+  id          String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String?           @map("user_id") @db.Uuid
+  itemId      String?           @map("item_id") @db.Uuid
+  status      request_status?   @default(pending)
   reason      String?
-  submittedAt DateTime?       @default(now()) @map("submitted_at") @db.Timestamptz(6)
-  updatedAt   DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  submittedAt DateTime?         @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  updatedAt   DateTime?         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   actions     RequestAction[]
-  item        Item?           @relation(fields: [itemId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user        User?           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  documents   RequestDocument[]
+  item        Item?             @relation(fields: [itemId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user        User?             @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([itemId], map: "idx_requests_item")
   @@index([status], map: "idx_requests_status")
   @@index([userId], map: "idx_requests_user")
   @@map("requests")
+}
+
+model RequestDocument {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  requestId    String    @map("request_id") @db.Uuid
+  itemId       String    @map("item_id") @db.Uuid
+  documentName String    @map("document_name")
+  documentUrl  String    @map("document_url")
+  uploadedAt   DateTime  @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+  request      Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  item         Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([requestId], map: "idx_request_documents_request_id")
+  @@index([itemId], map: "idx_request_documents_item_id")
+  @@map("request_documents")
 }
 
 model RequestAction {
