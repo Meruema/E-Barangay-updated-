@@ -26,6 +26,7 @@ model User {
   idUrl           String?
   request_actions RequestAction[]
   requests        Request[]
+  reservations    Reservation[]
   statistics      Statistics[]
   adminBarangay   Barangay?       @relation("AdminBarangay", fields: [adminBarangayId], references: [id])
   barangay        Barangay?       @relation(fields: [barangayId], references: [id])
@@ -72,6 +73,7 @@ model Item {
   barangay           Barangay?           @relation(fields: [barangayId], references: [id])
   category           Category?           @relation(fields: [categoryId], references: [id], onUpdate: NoAction)
   requests           Request[]
+  reservations       Reservation[]
   statistics         Statistics[]
   requestDocuments   RequestDocument[]
 
@@ -120,6 +122,29 @@ model Request {
   @@index([status], map: "idx_requests_status")
   @@index([userId], map: "idx_requests_user")
   @@map("requests")
+}
+
+model Reservation {
+  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId          String            @map("user_id") @db.Uuid
+  itemId          String            @map("item_id") @db.Uuid
+  reservationDate DateTime          @map("reservation_date") @db.Date
+  timeSlots       String[]          @map("time_slots")
+  status          reservation_status @default(pending)
+  reason          String?
+  approvedBy      String?           @map("approved_by") @db.Uuid
+  approvedAt      DateTime?         @map("approved_at") @db.Timestamptz(6)
+  rejectionReason String?           @map("rejection_reason")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item            Item              @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_reservations_user")
+  @@index([itemId], map: "idx_reservations_item")
+  @@index([reservationDate], map: "idx_reservations_date")
+  @@index([status], map: "idx_reservations_status")
+  @@map("reservations")
 }
 
 model RequestDocument {
@@ -179,6 +204,13 @@ enum request_status {
   approved
   rejected
   cancelled
+}
+
+enum reservation_status {
+  pending
+  confirmed
+  cancelled
+  completed
 }
 
 enum UserRole {

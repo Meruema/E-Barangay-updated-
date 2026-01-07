@@ -1,6 +1,6 @@
 'use client';
 import { MainDashboard } from '@/components/user/UserMainDashboard';
-import { UserServiceDirectory } from '@/components/user/services/UserServiceDirectory';
+import { ServiceDirectory as UserServiceDirectory } from '@/components/user/services/UserServiceDirectory';
 import { FacilitiesDirectory as UserFacilitiesDirectory } from '@/components/user/facilities/UserFacilitiesDirectory';
 import { useItems, useCategories } from '@/lib/hooks/useItems';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -44,7 +44,12 @@ export default function UserPage() {
     loadRequests();
   }, [user]);
 
-  if (servicesLoading || facilitiesLoading || categoriesLoading || requestsLoading) {
+  if (
+    servicesLoading ||
+    facilitiesLoading ||
+    categoriesLoading ||
+    requestsLoading
+  ) {
     return <AnimatedLoader message='Loading User Dashboard...' />;
   }
 

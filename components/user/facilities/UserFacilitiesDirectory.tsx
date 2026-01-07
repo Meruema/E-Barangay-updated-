@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { SharedHeader } from '../../SharedHeader';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
@@ -18,7 +19,6 @@ import {
   DialogTrigger,
 } from '../../ui/dialog';
 import { Search, Clock } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import {
   Card,
   CardContent,
@@ -33,12 +33,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../ui/select';
-import * as L from 'leaflet';
 import Footer from '../../Footer';
 import { useItems, useCategories } from '@/lib/hooks/useItems';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { createRequest } from '@/lib/api/requests';
 import { toast } from 'sonner';
+
+// Dynamic imports for Leaflet components to avoid SSR issues
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+);
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+);
 
 interface FacilityDirectoryProps {
   onNavigate: (
@@ -86,10 +103,11 @@ export function FacilitiesDirectory({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date(),
   );
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
   const [bookedSlots, setBookedSlots] = useState<
     Record<string, { time: string; userId: string; userName: string }[]>
   >({});
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const availableTimes = [
     '07:00 AM',
@@ -135,14 +153,52 @@ export function FacilitiesDirectory({
   // Fix for Leaflet default icon in Next.js - only run on client
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        shadowUrl:
-          'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      import('leaflet').then((L) => {
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+          shadowUrl:
+            'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        });
       });
     }
   }, []);
+
+  // Fetch reservations when date or facility changes
+  useEffect(() => {
+    const fetchReservations = async () => {
+      if (!selectedDate || !selectedFacilityForRequest) return;
+
+      setLoadingSlots(true);
+      try {
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        const response = await fetch(
+          `/api/reservations?itemId=${selectedFacilityForRequest.id}&date=${dateStr}`,
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const dateKey = `${selectedFacilityForRequest.id}-${dateStr}`;
+          const slots = data.reservations.flatMap((reservation: any) =>
+            reservation.timeSlots.map((time: string) => ({
+              time,
+              userId: reservation.user.id,
+              userName: reservation.user.fullName || reservation.user.email,
+            })),
+          );
+          setBookedSlots({ ...bookedSlots, [dateKey]: slots });
+        }
+      } catch (error) {
+        console.error('Failed to fetch reservations:', error);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    if (requestModalOpen) {
+      fetchReservations();
+    }
+  }, [selectedDate, selectedFacilityForRequest, requestModalOpen]);
 
   const categoryOptions = useMemo(() => {
     const allOption = {
@@ -181,8 +237,26 @@ export function FacilitiesDirectory({
     setSelectedFacilityForRequest(facility);
     setRequestReason('');
     setSelectedDate(new Date());
-    setSelectedTime(null);
+    setSelectedTimes([]);
     setRequestModalOpen(true);
+  };
+
+  const handleTimeToggle = (time: string) => {
+    setSelectedTimes((prev) =>
+      prev.includes(time)
+        ? prev.filter((t) => t !== time)
+        : [...prev, time].sort((a, b) => {
+            // Sort times chronologically
+            const parseTime = (t: string) => {
+              const [timePart, period] = t.split(' ');
+              let [hours, minutes] = timePart.split(':').map(Number);
+              if (period === 'PM' && hours !== 12) hours += 12;
+              if (period === 'AM' && hours === 12) hours = 0;
+              return hours * 60 + minutes;
+            };
+            return parseTime(a) - parseTime(b);
+          }),
+    );
   };
 
   const handleSubmitRequest = async () => {
@@ -190,45 +264,48 @@ export function FacilitiesDirectory({
       !user ||
       !selectedFacilityForRequest ||
       !selectedDate ||
-      !selectedTime
+      selectedTimes.length === 0
     ) {
-      toast.error('Please select both date and time');
-      return;
-    }
-
-    // Check for time conflicts
-    const dateKey = selectedDate.toISOString().split('T')[0];
-    const facilityKey = `${selectedFacilityForRequest.id}-${dateKey}`;
-    const existingBookings = bookedSlots[facilityKey] || [];
-
-    if (existingBookings.some((b) => b.time === selectedTime)) {
-      toast.error('This time slot is already booked');
+      toast.error('Please select at least one time slot');
       return;
     }
 
     setSubmitting(true);
     try {
-      const requestData = {
-        userId: user.id,
-        itemId: selectedFacilityForRequest.id,
-        reason: requestReason,
-        scheduledDate: selectedDate.toISOString(),
-        scheduledTime: selectedTime,
-      };
+      const response = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          itemId: selectedFacilityForRequest.id,
+          reservationDate: selectedDate.toISOString().split('T')[0],
+          timeSlots: selectedTimes,
+          reason: requestReason,
+        }),
+      });
 
-      await createRequest(
-        user.id,
-        selectedFacilityForRequest.id,
-        `${requestReason}\nScheduled: ${selectedDate.toLocaleDateString()} at ${selectedTime}`,
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          toast.error(data.error || 'Some time slots are already booked');
+        } else {
+          toast.error(data.error || 'Failed to create reservation');
+        }
+        return;
+      }
+
+      toast.success(
+        `Reservation created successfully! ${selectedTimes.length} time slot${selectedTimes.length > 1 ? 's' : ''} booked.`,
       );
-
-      toast.success('Request submitted successfully!');
       setRequestModalOpen(false);
       setRequestReason('');
-      setSelectedTime(null);
+      setSelectedTimes([]);
     } catch (error) {
-      console.error('Failed to submit request:', error);
-      toast.error('Failed to submit request');
+      console.error('Failed to submit reservation:', error);
+      toast.error('Failed to submit reservation');
     } finally {
       setSubmitting(false);
     }
@@ -407,47 +484,59 @@ export function FacilitiesDirectory({
                         {selectedDate.toLocaleDateString()}
                       </p>
                     )}
+                    {selectedTimes.length > 0 && (
+                      <p className='text-center text-xs font-medium text-blue-600'>
+                        {selectedTimes.length} slot{selectedTimes.length > 1 ? 's' : ''} selected
+                      </p>
+                    )}
                   </div>
                   <ScrollArea className='h-[300px] overflow-y-auto'>
-                    <div className='grid grid-cols-2 gap-2 px-4 pb-4'>
-                      {availableTimes.map((time) => {
-                        const dateKey =
-                          selectedDate?.toISOString().split('T')[0] || '';
-                        const facilityKey = `${selectedFacilityForRequest?.id}-${dateKey}`;
-                        const existingBookings = bookedSlots[facilityKey] || [];
-                        const booking = existingBookings.find(
-                          (b) => b.time === time,
-                        );
-                        const isBooked = !!booking;
+                    {loadingSlots ? (
+                      <div className='flex items-center justify-center py-8'>
+                        <p className='text-sm text-muted-foreground'>Loading slots...</p>
+                      </div>
+                    ) : (
+                      <div className='grid grid-cols-2 gap-2 px-4 pb-4'>
+                        {availableTimes.map((time) => {
+                          const dateKey =
+                            selectedDate?.toISOString().split('T')[0] || '';
+                          const facilityKey = `${selectedFacilityForRequest?.id}-${dateKey}`;
+                          const existingBookings = bookedSlots[facilityKey] || [];
+                          const booking = existingBookings.find(
+                            (b) => b.time === time,
+                          );
+                          const isBooked = !!booking;
+                          const isSelected = selectedTimes.includes(time);
 
-                        return (
-                          <Button
-                            key={time}
-                            onClick={() => !isBooked && setSelectedTime(time)}
-                            size='sm'
-                            variant={
-                              selectedTime === time ? 'default' : 'outline'
-                            }
-                            disabled={isBooked}
-                            style={
-                              isBooked
-                                ? {
-                                    backgroundColor: getUserColor(
-                                      booking.userId,
-                                    ),
-                                    borderColor: getUserColor(booking.userId),
-                                  }
-                                : {}
-                            }
-                            title={
-                              isBooked ? `Booked by ${booking.userName}` : time
-                            }
-                          >
-                            {time}
-                          </Button>
-                        );
-                      })}
-                    </div>
+                          return (
+                            <Button
+                              key={time}
+                              onClick={() => !isBooked && handleTimeToggle(time)}
+                              size='sm'
+                              variant={isSelected ? 'default' : 'outline'}
+                              disabled={isBooked}
+                              className={isSelected ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                              style={
+                                isBooked
+                                  ? {
+                                      backgroundColor: getUserColor(
+                                        booking.userId,
+                                      ),
+                                      borderColor: getUserColor(booking.userId),
+                                    }
+                                  : {}
+                              }
+                              title={
+                                isBooked ? `Booked by ${booking.userName}` : time
+                              }
+                            >
+                              {time}
+                              {isSelected && ' ✓'}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </ScrollArea>
                 </div>
               </div>
@@ -466,11 +555,13 @@ export function FacilitiesDirectory({
             </div>
 
             {/* Selected Info */}
-            {selectedDate && selectedTime && (
+            {selectedDate && selectedTimes.length > 0 && (
               <div className='p-3 bg-blue-50 rounded-md'>
-                <p className='text-sm font-medium text-blue-900'>
-                  Selected: {selectedDate.toLocaleDateString()} at{' '}
-                  {selectedTime}
+                <p className='text-sm font-medium text-blue-900 mb-1'>
+                  Selected: {selectedDate.toLocaleDateString()}
+                </p>
+                <p className='text-xs text-blue-700'>
+                  Time slots: {selectedTimes.join(', ')}
                 </p>
               </div>
             )}
@@ -486,10 +577,10 @@ export function FacilitiesDirectory({
             </Button>
             <Button
               onClick={handleSubmitRequest}
-              disabled={submitting || !selectedDate || !selectedTime}
+              disabled={submitting || !selectedDate || selectedTimes.length === 0}
               className='bg-blue-600 hover:bg-blue-700'
             >
-              {submitting ? 'Submitting...' : 'Submit Request'}
+              {submitting ? 'Submitting...' : `Book ${selectedTimes.length > 0 ? `(${selectedTimes.length} slot${selectedTimes.length > 1 ? 's' : ''})` : 'Reservation'}`}
             </Button>
           </DialogFooter>
         </DialogContent>

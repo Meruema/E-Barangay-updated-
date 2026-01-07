@@ -152,6 +152,16 @@ export function SharedHeader() {
               Requests
             </button>
             <button
+              onClick={() => router.push('/admin/reservations')}
+              className={`hover:text-blue-600 transition-colors ${
+                pathname === '/admin/reservations'
+                  ? 'text-blue-600 font-semibold'
+                  : ''
+              }`}
+            >
+              Reservations
+            </button>
+            <button
               onClick={() => router.push('/admin/users')}
               className={`hover:text-green-700 transition-colors ${
                 pathname === '/admin/users'
