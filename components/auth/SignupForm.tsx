@@ -390,10 +390,14 @@ export function SignupForm({
           {step === 3 && (
             <>
               <div className='space-y-2'>
+<<<<<<< Updated upstream
                 <Label htmlFor='idFile'>
                   Upload Valid ID / If Student, please attache photocopy of
                   School ID with 3 signatures
                 </Label>
+=======
+                <Label htmlFor='idFile'>Upload Valid ID / If Student, please attach a photocopy of School ID with 3 signatures</Label>
+>>>>>>> Stashed changes
                 <Input
                   id='idFile'
                   type='file'
