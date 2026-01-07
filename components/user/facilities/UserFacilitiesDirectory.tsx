@@ -6,6 +6,8 @@ import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { Textarea } from '../../ui/textarea';
 import { Label } from '../../ui/label';
+import { Calendar } from '../../ui/calendar';
+import { ScrollArea } from '../../ui/scroll-area';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogTrigger,
 } from '../../ui/dialog';
 import { Search, Clock } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -42,6 +45,8 @@ interface FacilityDirectoryProps {
     view: 'dashboard' | 'services' | 'facilities' | 'application' | 'requests',
   ) => void;
   onSelectFacility: (facility: string) => void;
+  facilities?: any[];
+  categories?: any[];
 }
 
 // Fix for Leaflet default icon in Next.js - moved to useEffect to avoid SSR issues
@@ -52,11 +57,25 @@ const defaultLng = 120.97;
 
 export function FacilitiesDirectory({
   onSelectFacility,
+  facilities: propFacilities,
+  categories: propCategories,
 }: FacilityDirectoryProps) {
   const { user } = useAuth();
   const barangayId = user?.barangayId ?? undefined;
-  const { items: facilities, loading } = useItems('facility', barangayId);
-  const { categories } = useCategories();
+  const { items: fetchedFacilities, loading: facilitiesLoading } = useItems(
+    'facility',
+    barangayId,
+  );
+  const { categories: fetchedCategories, loading: categoriesLoading } =
+    useCategories();
+
+  // Use prop data if available, otherwise use fetched data
+  const facilities = propFacilities ?? fetchedFacilities;
+  const categories = propCategories ?? fetchedCategories;
+  const loading = propFacilities
+    ? false
+    : facilitiesLoading || categoriesLoading;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [requestModalOpen, setRequestModalOpen] = useState(false);
@@ -64,6 +83,54 @@ export function FacilitiesDirectory({
     useState<any>(null);
   const [requestReason, setRequestReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    new Date(),
+  );
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [bookedSlots, setBookedSlots] = useState<
+    Record<string, { time: string; userId: string; userName: string }[]>
+  >({});
+
+  const availableTimes = [
+    '07:00 AM',
+    '07:30 AM',
+    '08:00 AM',
+    '08:30 AM',
+    '09:00 AM',
+    '09:30 AM',
+    '10:00 AM',
+    '10:30 AM',
+    '11:00 AM',
+    '11:30 AM',
+    '01:00 PM',
+    '01:30 PM',
+    '02:00 PM',
+    '02:30 PM',
+    '03:00 PM',
+    '03:30 PM',
+    '04:00 PM',
+    '04:30 PM',
+    '05:00 PM',
+    '05:30 PM',
+  ];
+
+  // Generate consistent color for user
+  const getUserColor = (userId: string) => {
+    const colors = [
+      'rgba(239, 68, 68, 0.4)', // red
+      'rgba(249, 115, 22, 0.4)', // orange
+      'rgba(234, 179, 8, 0.4)', // yellow
+      'rgba(34, 197, 94, 0.4)', // green
+      'rgba(59, 130, 246, 0.4)', // blue
+      'rgba(168, 85, 247, 0.4)', // purple
+      'rgba(236, 72, 153, 0.4)', // pink
+    ];
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+      hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
 
   // Fix for Leaflet default icon in Next.js - only run on client
   useEffect(() => {
@@ -113,22 +180,52 @@ export function FacilitiesDirectory({
   const handleFacilityClick = (facility: any) => {
     setSelectedFacilityForRequest(facility);
     setRequestReason('');
+    setSelectedDate(new Date());
+    setSelectedTime(null);
     setRequestModalOpen(true);
   };
 
   const handleSubmitRequest = async () => {
-    if (!user || !selectedFacilityForRequest) return;
+    if (
+      !user ||
+      !selectedFacilityForRequest ||
+      !selectedDate ||
+      !selectedTime
+    ) {
+      toast.error('Please select both date and time');
+      return;
+    }
+
+    // Check for time conflicts
+    const dateKey = selectedDate.toISOString().split('T')[0];
+    const facilityKey = `${selectedFacilityForRequest.id}-${dateKey}`;
+    const existingBookings = bookedSlots[facilityKey] || [];
+
+    if (existingBookings.some((b) => b.time === selectedTime)) {
+      toast.error('This time slot is already booked');
+      return;
+    }
 
     setSubmitting(true);
     try {
+      const requestData = {
+        userId: user.id,
+        itemId: selectedFacilityForRequest.id,
+        reason: requestReason,
+        scheduledDate: selectedDate.toISOString(),
+        scheduledTime: selectedTime,
+      };
+
       await createRequest(
         user.id,
         selectedFacilityForRequest.id,
-        requestReason,
+        `${requestReason}\nScheduled: ${selectedDate.toLocaleDateString()} at ${selectedTime}`,
       );
+
       toast.success('Request submitted successfully!');
       setRequestModalOpen(false);
       setRequestReason('');
+      setSelectedTime(null);
     } catch (error) {
       console.error('Failed to submit request:', error);
       toast.error('Failed to submit request');
@@ -242,18 +339,16 @@ export function FacilitiesDirectory({
                     </CardHeader>
 
                     <CardContent className='pt-2'>
-                      <div className='flex items-center justify-between space-x-3'>
-                        {/* Availability Box */}
-                        <div className='flex-1 flex items-center justify-center border border-gray-400 rounded-md px-3 py-2 text-sm text-black'>
-                          <Clock className='h-4 w-4 mr-1' />
-                          {facility.availability || 'N/A'}
-                        </div>
-
-                        {/* Status Box */}
-                        <div className='flex-1 flex items-center justify-center border border-gray-400 rounded-md px-3 py-2 text-sm text-black'>
-                          {facility.status}
-                        </div>
-                      </div>
+                      <Button
+                        variant='outline'
+                        className='w-full'
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFacilityClick(facility);
+                        }}
+                      >
+                        Book Appointment
+                      </Button>
                     </CardContent>
                   </Card>
                 </div>
@@ -280,49 +375,107 @@ export function FacilitiesDirectory({
 
       {/* Request Modal */}
       <Dialog open={requestModalOpen} onOpenChange={setRequestModalOpen}>
-        <DialogContent>
+        <DialogContent className='sm:max-w-[900px]'>
           <DialogHeader>
-            <DialogTitle>Request Facility</DialogTitle>
+            <DialogTitle>Book Appointment</DialogTitle>
             <DialogDescription>
               {selectedFacilityForRequest && (
-                <>Submit a request for "{selectedFacilityForRequest.name}"</>
+                <>Book "{selectedFacilityForRequest.name}"</>
               )}
             </DialogDescription>
           </DialogHeader>
+
           <div className='space-y-4'>
-            {selectedFacilityForRequest && (
-              <>
-                <div>
-                  <Label className='text-sm font-medium'>Facility:</Label>
-                  <p className='text-sm text-muted-foreground mt-1'>
-                    {selectedFacilityForRequest.name}
-                  </p>
+            {/* Calendar and Time Picker */}
+            <div className='flex divide-x overflow-hidden rounded-md border bg-background'>
+              <Calendar
+                mode='single'
+                onSelect={setSelectedDate}
+                selected={selectedDate}
+                disabled={(date) =>
+                  date < new Date(new Date().setHours(0, 0, 0, 0))
+                }
+              />
+              <div className='relative w-[300px] overflow-hidden'>
+                <div className='absolute inset-0 grid gap-4'>
+                  <div className='space-y-2 px-4 pt-4'>
+                    <p className='text-center text-sm font-medium'>
+                      Available Times
+                    </p>
+                    {selectedDate && (
+                      <p className='text-center text-xs text-muted-foreground'>
+                        {selectedDate.toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                  <ScrollArea className='h-[300px] overflow-y-auto'>
+                    <div className='grid grid-cols-2 gap-2 px-4 pb-4'>
+                      {availableTimes.map((time) => {
+                        const dateKey =
+                          selectedDate?.toISOString().split('T')[0] || '';
+                        const facilityKey = `${selectedFacilityForRequest?.id}-${dateKey}`;
+                        const existingBookings = bookedSlots[facilityKey] || [];
+                        const booking = existingBookings.find(
+                          (b) => b.time === time,
+                        );
+                        const isBooked = !!booking;
+
+                        return (
+                          <Button
+                            key={time}
+                            onClick={() => !isBooked && setSelectedTime(time)}
+                            size='sm'
+                            variant={
+                              selectedTime === time ? 'default' : 'outline'
+                            }
+                            disabled={isBooked}
+                            style={
+                              isBooked
+                                ? {
+                                    backgroundColor: getUserColor(
+                                      booking.userId,
+                                    ),
+                                    borderColor: getUserColor(booking.userId),
+                                  }
+                                : {}
+                            }
+                            title={
+                              isBooked ? `Booked by ${booking.userName}` : time
+                            }
+                          >
+                            {time}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
                 </div>
-                <div>
-                  <Label className='text-sm font-medium'>Description:</Label>
-                  <p className='text-sm text-muted-foreground mt-1'>
-                    {selectedFacilityForRequest.description || 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <Label className='text-sm font-medium'>Availability:</Label>
-                  <p className='text-sm text-muted-foreground mt-1'>
-                    {selectedFacilityForRequest.availability || 'N/A'}
-                  </p>
-                </div>
-              </>
-            )}
+              </div>
+            </div>
+
+            {/* Reason */}
             <div>
-              <Label htmlFor='reason'>Reason for Request</Label>
+              <Label htmlFor='reason'>Reason for Request (Optional)</Label>
               <Textarea
                 id='reason'
                 placeholder='Please provide details about your request...'
                 value={requestReason}
                 onChange={(e) => setRequestReason(e.target.value)}
-                rows={4}
+                rows={3}
               />
             </div>
+
+            {/* Selected Info */}
+            {selectedDate && selectedTime && (
+              <div className='p-3 bg-blue-50 rounded-md'>
+                <p className='text-sm font-medium text-blue-900'>
+                  Selected: {selectedDate.toLocaleDateString()} at{' '}
+                  {selectedTime}
+                </p>
+              </div>
+            )}
           </div>
+
           <DialogFooter>
             <Button
               variant='outline'
@@ -333,7 +486,7 @@ export function FacilitiesDirectory({
             </Button>
             <Button
               onClick={handleSubmitRequest}
-              disabled={submitting}
+              disabled={submitting || !selectedDate || !selectedTime}
               className='bg-blue-600 hover:bg-blue-700'
             >
               {submitting ? 'Submitting...' : 'Submit Request'}

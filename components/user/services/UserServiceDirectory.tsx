@@ -65,6 +65,8 @@ interface ServiceDirectoryProps {
     view: 'dashboard' | 'services' | 'facilities' | 'application' | 'requests',
   ) => void;
   onSelectService: (service: string) => void;
+  services?: any[];
+  categories?: any[];
 }
 
 const iconMap: Record<string, any> = {
@@ -86,11 +88,23 @@ const iconMap: Record<string, any> = {
 export function ServiceDirectory({
   onNavigate,
   onSelectService,
+  services: propServices,
+  categories: propCategories,
 }: ServiceDirectoryProps) {
   const { user } = useAuth();
   const barangayId = user?.barangayId ?? undefined;
-  const { items: services, loading } = useItems('service', barangayId);
-  const { categories } = useCategories();
+  const { items: fetchedServices, loading: servicesLoading } = useItems(
+    'service',
+    barangayId,
+  );
+  const { categories: fetchedCategories, loading: categoriesLoading } =
+    useCategories();
+
+  // Use prop data if available, otherwise use fetched data
+  const services = propServices ?? fetchedServices;
+  const categories = propCategories ?? fetchedCategories;
+  const loading = propServices ? false : servicesLoading || categoriesLoading;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('alphabetical');
@@ -170,14 +184,6 @@ export function ServiceDirectory({
     }
   };
 
-  if (loading) {
-    return (
-      <div className='min-h-screen flex items-center justify-center'>
-        <div className='text-lg'>Loading services...</div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <div className='min-h-screen bg-gradient-to-b from-blue-50 to-gray-200 p-6 rounded-lg m-5'>
@@ -185,65 +191,6 @@ export function ServiceDirectory({
 
         <main className='max-w-7xl mx-auto px-4 py-8'>
           {/* SERVICES - Feautured */}
-          <div className='mb-8'>
-            <h2 className='text-2xl mb-4 flex items-center font-semibold justify-center'>
-              <Star className='h-5 w-5 mr-2 text-yellow-500 fill-current' />
-              Featured Services
-            </h2>
-            <div className='flex justify-center'>
-              <Carousel className='w-full max-w-4xl'>
-                <CarouselContent className='px-2'>
-                  {featuredServices.map((service) => {
-                    const iconName =
-                      service.name?.toLowerCase().split(' ')[0] || 'default';
-                    const IconComponent = iconMap[iconName] || iconMap.default;
-                    return (
-                      <CarouselItem
-                        key={service.id}
-                        className='md:basis-1/2 lg:basis-1/3 px-2'
-                      >
-                        <Card
-                          className='border-2 border-blue-300 rounded-lg hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col'
-                          onClick={() => handleServiceClick(service)}
-                        >
-                          <CardHeader className='pb-3 text-center'>
-                            <div className='flex justify-center'>
-                              <div>
-                                <IconComponent className='h-7 w-7 bg-white text-blue-800 rounded-lg' />
-                              </div>
-                            </div>
-                            <CardTitle className='text-lg mt-2'>
-                              {service.name}
-                            </CardTitle>
-                            <CardDescription className='text-sm'>
-                              {service.description || ''}
-                            </CardDescription>
-                          </CardHeader>
-
-                          <CardContent className='pt-0 mt-auto'>
-                            <div className='flex items-center justify-between space-x-3'>
-                              {/* Availability Box */}
-                              <div className='flex-1 flex items-center justify-center border-1 border-gray-400 rounded-md px-3 py-2 text-sm text-black'>
-                                <Clock className='h-4 w-4 mr-1' />
-                                {service.availability || 'N/A'}
-                              </div>
-
-                              {/* Status Box */}
-                              <div className='flex-1 flex items-center justify-center border-1 border-gray-400 rounded-md px-3 py-2 text-sm text-black'>
-                                {service.status}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </CarouselItem>
-                    );
-                  })}
-                </CarouselContent>
-                <CarouselPrevious className='bg-blue-500 text-white' />
-                <CarouselNext className='bg-blue-500 text-white' />
-              </Carousel>
-            </div>
-          </div>
 
           <div>
             {/* SERVICES - Search Box */}
