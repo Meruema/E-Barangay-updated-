@@ -21,6 +21,7 @@ model User {
   fullName        String          @db.VarChar(50)
   street          String          @db.VarChar(60)
   verified        Boolean         @default(false)
+  accountStatus   String          @default("active") @map("account_status") @db.VarChar(20)
   addressUrl      String?
   idUrl           String?
   request_actions RequestAction[]
@@ -85,6 +86,19 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@map("audit_logs")
+}
+
+model AccountSuspension {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  reason       String
+  suspendedBy  String    @map("suspended_by") @db.Uuid
+  suspendedAt  DateTime  @default(now()) @map("suspended_at") @db.Timestamptz(6)
+  reactivatedAt DateTime? @map("reactivated_at") @db.Timestamptz(6)
+  isActive     Boolean   @default(true) @map("is_active")
+
+  @@index([userId], map: "idx_account_suspensions_user_id")
+  @@map("account_suspensions")
 }
 
 model Request {

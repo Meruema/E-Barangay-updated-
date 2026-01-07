@@ -16,6 +16,7 @@ export async function GET() {
         barangayId: session.user.barangayId,
         username: session.user.fullName,
         role: session.user.role,
+        accountStatus: session.user.accountStatus,
       },
     });
   } catch (error) {

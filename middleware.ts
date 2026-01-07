@@ -4,11 +4,11 @@ import { NextRequest, NextResponse } from 'next/server';
 // Lightweight session checker for middleware (no Prisma)
 async function getSessionFromCookie(
   request: NextRequest,
-): Promise<UserRole | undefined> {
+): Promise<{ role?: UserRole; suspended?: boolean }> {
   const sessionToken = request.cookies.get('session_token')?.value;
 
   if (!sessionToken || !sessionToken.includes('::')) {
-    return undefined;
+    return {};
   }
 
   // For now, we need to make an API call to get the user role
@@ -25,14 +25,21 @@ async function getSessionFromCookie(
     if (response.ok) {
       const data = await response.json();
       console.log('[Middleware] API Response:', data);
+
+      // Check if account is suspended
+      if (data?.user?.accountStatus === 'suspended') {
+        console.log('[Middleware] Account is suspended');
+        return { suspended: true };
+      }
+
       // The API returns { user: { role: ... } }
-      return data?.user?.role as UserRole;
+      return { role: data?.user?.role as UserRole };
     }
   } catch (error) {
     console.error('[Middleware] Error fetching user role:', error);
   }
 
-  return undefined;
+  return {};
 }
 
 export async function middleware(request: NextRequest) {
@@ -44,7 +51,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/_next/') ||
     pathname === '/' ||
     pathname === '/user-landing' ||
-    pathname === '/unauthorized'
+    pathname === '/unauthorized' ||
+    pathname === '/suspended'
   ) {
     return NextResponse.next();
   }
@@ -63,8 +71,18 @@ export async function middleware(request: NextRequest) {
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
   if (!isProtected) return NextResponse.next();
 
-  // Get user role from session
-  const role = await getSessionFromCookie(request);
+  // Get user session
+  const session = await getSessionFromCookie(request);
+
+  // Check if account is suspended
+  if (session.suspended) {
+    console.log(
+      '[Middleware] BLOCKING ACCESS - Account suspended, redirecting to /suspended',
+    );
+    return NextResponse.redirect(new URL('/suspended', request.url));
+  }
+
+  const role = session.role;
 
   // Debug logging
   console.log('[Middleware] Path:', pathname);

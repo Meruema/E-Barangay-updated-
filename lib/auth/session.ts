@@ -62,6 +62,7 @@ export async function getSession() {
       blkLot: true,
       street: true,
       role: true,
+      accountStatus: true,
     },
   });
 
@@ -81,6 +82,7 @@ export async function getSession() {
       blkLot: user.blkLot,
       street: user.street,
       role: user.role,
+      accountStatus: user.accountStatus,
     },
   };
 }

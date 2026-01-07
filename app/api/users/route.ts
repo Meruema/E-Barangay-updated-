@@ -142,6 +142,7 @@ export async function GET(request: NextRequest) {
         email: true,
         role: true,
         verified: true,
+        accountStatus: true,
         idUrl: true,
         addressUrl: true,
         createdAt: true,
