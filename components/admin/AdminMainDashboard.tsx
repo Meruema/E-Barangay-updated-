@@ -12,7 +12,6 @@ import { Button } from '../ui/button';
 import { getStatistics } from '@/lib/api/statistics';
 import { useEffect, useState } from 'react';
 import { getAllRequests } from '@/lib/api/requests';
-import { TrendingUp } from 'lucide-react';
 import { useRouterWithProgress } from '@/lib/hooks/useRouterWithProgress';
 import Footer from '../Footer';
 
@@ -38,7 +37,7 @@ export function MainDashboard() {
   }, []);
 
   return (
-    <div>
+    <div className='min-h-screen bg-background'>
       <div className='bg-gradient-to-b from-blue-50 to-gray-200 p-6 rounded-lg m-5'>
         <main className='max-w-7xl mx-auto px-4 py-8'>
           {/* Hero Section */}
@@ -137,10 +136,7 @@ export function MainDashboard() {
           </div>
         </main>
       </div>
-      <div>
-        {' '}
-        <Footer />{' '}
-      </div>
+        <Footer />
     </div>
   );
 }

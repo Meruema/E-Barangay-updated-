@@ -78,28 +78,23 @@ export function Header({ onNavigate }: HeaderProps) {
         </nav>
 
         {/* Right Side Buttons */}
-        <div className='flex items-center space-x-3'>
+        <div className="flex items-center space-x-3">
           <DropdownMenu>
-            <DropdownMenuContent className='w-30' align='start'>
-              <DropdownMenuLabel>Sign in</DropdownMenuLabel>
-              <DropdownMenuLabel>Log in</DropdownMenuLabel>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button variant='outline'>
-                <Menu className='h-4 w-4' />
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Menu className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className='w-56' align='start'>
+
+            <DropdownMenuContent className="w-56" align="start">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem onClick={handleSignOut}>
-                  {' '}
-                  Log Out{' '}
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
+              <DropdownMenuItem
+                onClick={handleSignOut}
+                className="cursor-pointer w-full"
+              >
+                Log Out
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Header } from '../UserHeader';
+import { SharedHeader } from '../../SharedHeader';
 import { getItemById } from '@/lib/api/items';
 import { ItemWithCategory } from '@/lib/database.types';
 import { Badge } from '../../ui/badge';
@@ -138,7 +138,7 @@ export function ServiceApplication({
 
   return (
     <div className='min-h-screen bg-gray-50'>
-      <Header />
+      <SharedHeader />
 
       <main className='max-w-6xl mx-auto px-4 py-8'>
         {/* Back Navigation */}

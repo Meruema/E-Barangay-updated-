@@ -32,7 +32,7 @@ export function SharedHeader() {
       setLogoutLoading(true);
       await axiosInstance.post('/auth/logout');
       setTimeout(() => {
-        window.location.reload();
+        router.push('/');
       }, 1200);
     } catch (error) {
       console.error('Failed to log out:', error);
@@ -247,14 +247,8 @@ export function SharedHeader() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant='outline'>
-                    {user.role === 'SUPER_ADMIN' || user.role === 'ADMIN' ? (
-                      <Menu className='h-4 w-4' />
-                    ) : (
-                      <>
                         <User className='h-4 w-4 mr-2' />
                         {user.email?.split('@')[0] || 'Account'}
-                      </>
-                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className='w-56' align='end'>
@@ -269,9 +263,7 @@ export function SharedHeader() {
                   <DropdownMenuGroup>
                     {user.role === 'USER' && (
                       <>
-                        <DropdownMenuItem
-                          onClick={() => router.push('/user/requests')}
-                        >
+                        <DropdownMenuItem onClick={() => router.push('/requests')}>
                           View All Requests
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />

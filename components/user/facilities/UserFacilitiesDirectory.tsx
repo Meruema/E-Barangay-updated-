@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Header } from '../UserHeader';
+import { SharedHeader } from '../../SharedHeader';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { Textarea } from '../../ui/textarea';
@@ -148,7 +148,7 @@ export function FacilitiesDirectory({
   return (
     <div>
       <div className='min-h-screen bg-gradient-to-b from-blue-50 to-gray-200 p-6 rounded-lg m-5'>
-        <Header />
+        <SharedHeader />
 
         <main className='max-w-7xl mx-auto px-4 py-8'>
           {/* MAP VIEW */}

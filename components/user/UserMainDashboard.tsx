@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Header } from './UserHeader';
+import { SharedHeader } from '../SharedHeader';
 import {
   Card,
   CardContent,
@@ -280,7 +280,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   return (
     <div>
       <div className='min-h-screen bg-gradient-to-b from-blue-50 to-gray-200 p-6 rounded-lg m-5'>
-        <Header />
+        <SharedHeader />
 
         <main className='max-w-7xl mx-auto px-4 py-8'>
           {/* Hero Section */}
