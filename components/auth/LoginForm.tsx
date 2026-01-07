@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { signIn } from '@/app/actions/auth';
 import { toast } from 'sonner';
+import { Eye, EyeOff } from 'lucide-react';
 interface LoginFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -27,6 +28,7 @@ export function LoginForm({
 }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
 
   const router = useRouterWithProgress();
@@ -101,16 +103,73 @@ export function LoginForm({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='password'>Password</Label>
-              <Input
-                id='password'
-                type='password'
-                placeholder='••••••••'
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div className='relative'>
+                <Input
+                  id='password'
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder='••••••••'
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className='pr-10'
+                  required
+                />
+                <button
+                  type='button'
+                  onClick={() => setShowPassword(!showPassword)}
+                  className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors'
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <div
+                    className={`transition-all duration-300 ${
+                      showPassword
+                        ? 'animate-[spin_0.3s_ease-in-out] scale-110'
+                        : 'animate-[wiggle_0.3s_ease-in-out]'
+                    }`}
+                    style={{
+                      animation: showPassword
+                        ? 'eyeOpen 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
+                        : 'eyeClose 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+                    }}
+                  >
+                    {showPassword ? (
+                      <Eye className='h-5 w-5' />
+                    ) : (
+                      <EyeOff className='h-5 w-5' />
+                    )}
+                  </div>
+                </button>
+              </div>
             </div>
+
+            <style jsx>{`
+              @keyframes eyeOpen {
+                0% {
+                  transform: scale(0.8) rotate(-20deg);
+                  opacity: 0.5;
+                }
+                50% {
+                  transform: scale(1.2) rotate(10deg);
+                }
+                100% {
+                  transform: scale(1) rotate(0deg);
+                  opacity: 1;
+                }
+              }
+
+              @keyframes eyeClose {
+                0% {
+                  transform: scale(1.1) rotate(10deg);
+                  opacity: 1;
+                }
+                50% {
+                  transform: scale(0.9) rotate(-5deg);
+                }
+                100% {
+                  transform: scale(1) rotate(0deg);
+                  opacity: 1;
+                }
+              }
+            `}</style>
 
             <Button type='submit' className='w-full'>
               Log In
