@@ -6,15 +6,17 @@ import { canAccessPage } from '@/lib/auth/canAccess';
 import { useRouterWithProgress } from '@/lib/hooks/useRouterWithProgress';
 import { SharedHeader } from '@/components/SharedHeader';
 import { MainDashboard } from '@/components/admin/AdminMainDashboard';
+import { getAllRequests } from '@/lib/api/requests';
 
 export default function AdminPage() {
   const [loading, setLoading] = useState(true);
+  const [recentRequests, setRecentRequests] = useState<Array<any>>([]);
   const router = useRouterWithProgress();
   const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     if (authLoading) return;
-    
+
     if (
       !canAccessPage(
         '/admin',
@@ -24,9 +26,21 @@ export default function AdminPage() {
       router.push('/');
       return;
     }
-    
-    setLoading(false);
-    
+
+    // Fetch recent requests
+    async function loadRequests() {
+      try {
+        const all = await getAllRequests();
+        setRecentRequests(all.slice(0, 3));
+      } catch (error) {
+        console.error('Failed to load requests:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadRequests();
+
     // Clear post-login flag once auth is loaded
     if (
       typeof window !== 'undefined' &&
@@ -61,7 +75,7 @@ export default function AdminPage() {
       <div className='py-6'>
         <SharedHeader />
       </div>
-      <MainDashboard />
+      <MainDashboard recentRequests={recentRequests} />
     </div>
   );
 }

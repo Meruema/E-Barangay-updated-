@@ -11,24 +11,22 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { getStatistics } from '@/lib/api/statistics';
 import { useEffect, useState } from 'react';
-import { getAllRequests } from '@/lib/api/requests';
 import { useRouterWithProgress } from '@/lib/hooks/useRouterWithProgress';
 import Footer from '../Footer';
 
-export function MainDashboard() {
+interface MainDashboardProps {
+  recentRequests?: Array<any>;
+}
+
+export function MainDashboard({ recentRequests = [] }: MainDashboardProps) {
   const router = useRouterWithProgress();
   const [stats, setStats] = useState<any>(null);
-  const [recentRequests, setRecentRequests] = useState<Array<any>>([]);
 
   useEffect(() => {
     async function loadStats() {
       try {
         const statistics = await getStatistics();
         setStats(statistics);
-
-        // Load only first 3 requests
-        const all = await getAllRequests();
-        setRecentRequests(all.slice(0, 3));
       } catch (error) {
         console.error('Failed to load statistics:', error);
       }

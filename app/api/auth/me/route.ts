@@ -13,7 +13,8 @@ export async function GET() {
       user: {
         id: session.user.id,
         email: session.user.email,
-        barangay: session.user.barangay,
+        barangayId: session.user.barangayId,
+        username: session.user.fullName,
         role: session.user.role,
       },
     });

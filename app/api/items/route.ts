@@ -27,17 +27,9 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Item not found' }, { status: 404 });
       }
 
-      // If admin, restrict to their barangay
-      if (currentUser && currentUser.role === 'ADMIN') {
-        const admin = await prisma.user.findUnique({
-          where: { id: currentUser.id },
-          select: { adminBarangayId: true },
-        });
-        if (
-          item.barangayId &&
-          admin?.adminBarangayId &&
-          item.barangayId !== admin.adminBarangayId
-        ) {
+      // Check if user has access to this item's barangay
+      if (currentUser && currentUser.barangayId) {
+        if (item.barangayId && item.barangayId !== currentUser.barangayId) {
           return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
       }
@@ -76,27 +68,11 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Filter by barangay based on user role
-    if (currentUser && currentUser.role === 'ADMIN') {
-      // Admin: restrict to their adminBarangayId
-      const admin = await prisma.user.findUnique({
-        where: { id: currentUser.id },
-        select: { adminBarangayId: true },
-      });
-      if (admin?.adminBarangayId) {
-        where.barangayId = admin.adminBarangayId;
-      }
-    } else if (currentUser && currentUser.role === 'USER') {
-      // Regular user: restrict to their barangayId
-      const user = await prisma.user.findUnique({
-        where: { id: currentUser.id },
-        select: { barangayId: true },
-      });
-      if (user?.barangayId) {
-        where.barangayId = user.barangayId;
-      }
+    // Filter by barangay - use barangayId from session or query param
+    if (currentUser && currentUser.barangayId) {
+      where.barangayId = currentUser.barangayId;
     } else if (barangayId) {
-      // For non-authenticated requests or other roles, use query param if provided
+      // For non-authenticated requests, use query param if provided
       where.barangayId = barangayId;
     }
 

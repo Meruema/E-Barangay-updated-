@@ -37,7 +37,7 @@ import {
 import Footer from '../Footer';
 import { useCategories } from '@/lib/hooks/useItems';
 import { getItems, createItem, updateItem, deleteItem } from '@/lib/api/items';
-import { getCurrentUser } from '@/app/actions/auth';
+import { useAuth } from '@/lib/hooks/useAuth';
 import type { ItemWithCategory } from '@/lib/database.types';
 
 const CATEGORY_LIST = [
@@ -61,10 +61,23 @@ async function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function AdminDirectory() {
-  const { categories } = useCategories();
-  const [items, setItems] = useState<ItemWithCategory[]>([]);
-  const [loading, setLoading] = useState(true);
+interface AdminDirectoryProps {
+  items?: ItemWithCategory[];
+  categories?: any[];
+  onItemsChange?: (items: ItemWithCategory[]) => void;
+}
+
+export function AdminDirectory({
+  items: propItems = [],
+  categories: propCategories = [],
+  onItemsChange,
+}: AdminDirectoryProps) {
+  const { user } = useAuth();
+  const { categories: fetchedCategories } = useCategories();
+  const categories =
+    propCategories.length > 0 ? propCategories : fetchedCategories;
+  const [items, setItems] = useState<ItemWithCategory[]>(propItems);
+  const [loading, setLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -101,19 +114,23 @@ export function AdminDirectory() {
 
   // Fetch items, only for admin's barangay
   async function loadItems() {
+    if (!user) return;
+
     setLoading(true);
     try {
       let all = [];
-      const user = await getCurrentUser();
       let type: 'service' | 'facility' | undefined = undefined;
       if (activeTab === 'services') type = 'service';
       if (activeTab === 'facilities') type = 'facility';
-      if (user && user.role === 'ADMIN' && user.barangay && user.barangay.id) {
-        all = await getItems(type, user.barangay.id);
+      if (user.barangayId) {
+        all = await getItems(type, user.barangayId);
       } else {
         all = await getItems(type);
       }
       setItems(all);
+      if (onItemsChange) {
+        onItemsChange(all);
+      }
     } catch (err) {
       console.error('Failed to load items', err);
       toast.error('Failed to load items');
@@ -121,6 +138,13 @@ export function AdminDirectory() {
       setLoading(false);
     }
   }
+
+  // Sync items when props change
+  useEffect(() => {
+    if (propItems.length > 0) {
+      setItems(propItems);
+    }
+  }, [propItems]);
 
   useEffect(() => {
     loadItems();
