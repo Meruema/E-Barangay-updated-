@@ -60,6 +60,7 @@ interface MainDashboardProps {
   facilities?: any[];
   categories?: any[];
   requests?: any[];
+  reservations?: any[]; // <-- Add this line
   onRequestsChange?: (requests: any[]) => void;
 }
 
@@ -174,11 +175,31 @@ export function MainDashboard({
   facilities = [],
   categories = [],
   requests = [],
+  reservations = [],
   onRequestsChange,
 }: MainDashboardProps) {
   const router = useRouter();
   const { user } = useAuth();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [userReservations, setUserReservations] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchReservations = async () => {
+      try {
+        const res = await fetch(`/api/reservations/user?userId=${user.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setUserReservations(data.reservations || []);
+        } else {
+          setUserReservations([]);
+        }
+      } catch {
+        setUserReservations([]);
+      }
+    };
+    fetchReservations();
+  }, [user]);
 
   const handleCancelRequest = async (requestId: string) => {
     if (!user) return;
@@ -406,15 +427,15 @@ export function MainDashboard({
                   </h2>
                 </div>
                 <div className='space-y-3'>
-                  {facilities.filter((f) => f.status === 'pending').length === 0 ? (
+                  {userReservations.filter((r) => r.status === 'pending').length === 0 ? (
                     <Card>
                       <CardContent className='py-8 text-center text-muted-foreground'>
                         No pending reservations
                       </CardContent>
                     </Card>
                   ) : (
-                    facilities
-                      .filter((f) => f.status === 'pending')
+                    userReservations
+                      .filter((r) => r.status === 'pending')
                       .slice(0, 5)
                       .map((reservation) => (
                         <Card
@@ -427,22 +448,90 @@ export function MainDashboard({
                                 <div className='flex items-center gap-2 mb-1'>
                                   <Clock className='h-4 w-4 text-blue-600' />
                                   <h3 className='font-semibold text-base'>
-                                    {reservation.name || reservation.facilityName || 'Unknown Facility'}
+                                    {reservation.item?.name || reservation.name || reservation.facilityName || 'Unknown Facility'}
                                   </h3>
                                 </div>
                                 <p className='text-sm text-muted-foreground mb-2'>
-                                  {reservation.date ? new Date(reservation.date).toLocaleDateString() : ''}
+                                  {reservation.reservationDate ? new Date(reservation.reservationDate).toLocaleDateString() : ''}
                                 </p>
-                                {reservation.reason && (
-                                  <p className='text-sm text-muted-foreground line-clamp-2'>
-                                    <span className='font-medium'>Reason:</span>{' '}
-                                    {reservation.reason}
-                                  </p>
+                                {reservation.letterOfIntentUrl && (
+                                  <a
+                                    href={reservation.letterOfIntentUrl}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    className='text-xs text-blue-700 underline'
+                                  >
+                                    View Letter of Intent
+                                  </a>
                                 )}
                               </div>
                               <div className='flex flex-col items-end gap-2'>
                                 <Badge className='bg-blue-100 text-blue-800 border-blue-200'>
                                   Pending
+                                </Badge>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                  )}
+                </div>
+              </div>
+
+              {/* Approved Reservations */}
+              <div className='bg-green-50 p-6 rounded-lg'>
+                <div className='flex items-center justify-between mb-6'>
+                  <h2 className='text-2xl font-semibold text-green-800'>
+                    Approved Reservations
+                  </h2>
+                </div>
+                <div className='space-y-3'>
+                  {userReservations.filter((r) => r.status === 'confirmed').length === 0 ? (
+                    <Card>
+                      <CardContent className='py-8 text-center text-muted-foreground'>
+                        No approved reservations
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    userReservations
+                      .filter((r) => r.status === 'confirmed')
+                      .slice(0, 5)
+                      .map((reservation) => (
+                        <Card
+                          key={reservation.id}
+                          className='hover:shadow-md transition-shadow'
+                        >
+                          <CardContent className='p-4'>
+                            <div className='flex items-start justify-between gap-4'>
+                              <div className='flex-1'>
+                                <div className='flex items-center gap-2 mb-1'>
+                                  <FileCheck2 className='h-4 w-4 text-green-600' />
+                                  <h3 className='font-semibold text-base'>
+                                    {reservation.item?.name || reservation.name || reservation.facilityName || 'Unknown Facility'}
+                                  </h3>
+                                </div>
+                                <p className='text-sm text-muted-foreground mb-2'>
+                                  {reservation.reservationDate ? new Date(reservation.reservationDate).toLocaleDateString() : ''}
+                                  {reservation.timeSlots && reservation.timeSlots.length > 0 && (
+                                    <span className='ml-2'>
+                                      • {reservation.timeSlots.join(', ')}
+                                    </span>
+                                  )}
+                                </p>
+                                {reservation.letterOfIntentUrl && (
+                                  <a
+                                    href={reservation.letterOfIntentUrl}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    className='text-xs text-blue-700 underline'
+                                  >
+                                    View Letter of Intent
+                                  </a>
+                                )}
+                              </div>
+                              <div className='flex flex-col items-end gap-2'>
+                                <Badge className='bg-green-100 text-green-800 border-green-200'>
+                                  Approved
                                 </Badge>
                               </div>
                             </div>

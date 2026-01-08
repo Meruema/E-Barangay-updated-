@@ -152,6 +152,18 @@ export function FacilitiesDirectory({
     return colors[Math.abs(hash) % colors.length];
   };
 
+  // Parse facility type to get max advance booking days
+  const getMaxAdvanceDays = (type: string | null | undefined) => {
+    if (!type) return 30; // default 30 days if no type
+    const match = type.match(/(\d+)\s*(day|week)s?/i);
+    if (!match) return 30;
+    const num = parseInt(match[1]);
+    const unit = match[2].toLowerCase();
+    if (unit === 'day') return num;
+    if (unit === 'week') return num * 7;
+    return 30;
+  };
+
   // Fix for Leaflet default icon in Next.js - only run on client
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -238,7 +250,13 @@ export function FacilitiesDirectory({
 
   const handleFacilityClick = (facility: any) => {
     setSelectedFacilityForRequest(facility);
-    setSelectedDate(new Date());
+    // Select the first available date based on advance booking rules
+    const maxAdvanceDays = getMaxAdvanceDays(facility.type);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const minDate = new Date(today);
+    minDate.setDate(today.getDate() + maxAdvanceDays);
+    setSelectedDate(minDate);
     setSelectedTimes([]);
     setRequestModalOpen(true);
   };
@@ -273,6 +291,34 @@ export function FacilitiesDirectory({
     }
     if (!letterOfIntent) {
       toast.error('Please upload a Letter of Intent image.');
+      return;
+    }
+
+    // Check if selected times are consecutive
+    const sortedTimes = selectedTimes.sort((a, b) => {
+      const parseTime = (t: string) => {
+        const [timePart, period] = t.split(' ');
+        let [hours, minutes] = timePart.split(':').map(Number);
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        return hours * 60 + minutes;
+      };
+      return parseTime(a) - parseTime(b);
+    });
+    const isConsecutive = sortedTimes.every((time, index) => {
+      if (index === 0) return true;
+      const prevTime = sortedTimes[index - 1];
+      const parseTime = (t: string) => {
+        const [timePart, period] = t.split(' ');
+        let [hours, minutes] = timePart.split(':').map(Number);
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        return hours * 60 + minutes;
+      };
+      return parseTime(time) - parseTime(prevTime) === 30;
+    });
+    if (!isConsecutive) {
+      toast.error('Please select consecutive time slots (e.g., 7:00 AM to 8:30 AM).');
       return;
     }
 
@@ -492,14 +538,23 @@ export function FacilitiesDirectory({
           <div className='space-y-4'>
             {/* Calendar and Time Picker */}
             <div className='flex divide-x overflow-hidden rounded-md border bg-background'>
-              <Calendar
-                mode='single'
-                onSelect={setSelectedDate}
-                selected={selectedDate}
-                disabled={(date) =>
-                  date < new Date(new Date().setHours(0, 0, 0, 0))
-                }
-              />
+              {(() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const maxAdvanceDays = getMaxAdvanceDays(selectedFacilityForRequest?.type);
+                const minDate = new Date(today);
+                minDate.setDate(today.getDate() + maxAdvanceDays);
+                return (
+                  <Calendar
+                    mode='single'
+                    onSelect={setSelectedDate}
+                    selected={selectedDate}
+                    disabled={(date) =>
+                      date < minDate
+                    }
+                  />
+                );
+              })()}
               <div className='relative w-[300px] overflow-hidden'>
                 <div className='absolute inset-0 grid gap-4'>
                   <div className='space-y-2 px-4 pt-4'>

@@ -9,7 +9,8 @@ export function NProgressConfig() {
       showSpinner: true,
       minimum: 0.08,
       easing: 'ease',
-      speed: 500,
+      speed: 1200, // slower progress bar
+      trickleSpeed: 400, // slower trickle
     });
   }, []);
 
