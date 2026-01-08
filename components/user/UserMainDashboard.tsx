@@ -113,24 +113,6 @@ const facilityColors: Record<string, string> = {
   default: 'bg-gray-100 text-gray-600',
 };
 
-const recentUpdates = [
-  {
-    title: 'New Support Contact Added',
-    date: '2025-10-05',
-    type: 'Enhancement',
-  },
-  {
-    title: 'Community Hall Reservation Launched',
-    date: '2025-10-11',
-    type: 'Enhancement',
-  },
-  {
-    title: 'Maintenance Notice',
-    date: '2025-11-21',
-    type: 'Update',
-  },
-];
-
 const Faq1 = ({
   items = [
     {
