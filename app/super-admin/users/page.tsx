@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { useRouterWithProgress } from '@/lib/hooks/useRouterWithProgress';
+import { SharedHeader } from '@/components/SharedHeader';
 import {
   Table,
   TableHeader,
@@ -63,7 +63,7 @@ export default function ManageUsersPage() {
   const [barangayFilter, setBarangayFilter] = useState('__ALL__');
   const [pendingBarangayFilter, setPendingBarangayFilter] = useState('__ALL__');
   const [sheetOpen, setSheetOpen] = useState(false);
-  const router = useRouterWithProgress();
+  // const router = useRouterWithProgress();
 
   // Get current user info
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -229,8 +229,46 @@ export default function ManageUsersPage() {
           );
         },
       },
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => {
+          const user = row.original;
+          const canVerify = user.role === 'USER' && !user.verified;
+          return canVerify ? (
+            <Button
+              size='sm'
+              variant='outline'
+              className='border-green-400 text-green-700 hover:bg-green-100 hover:text-green-900 transition'
+              disabled={updating === user.id.toString()}
+              onClick={async () => {
+                setUpdating(user.id.toString());
+                try {
+                  const res = await fetch('/api/users', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: user.id, verified: true }),
+                  });
+                  if (res.ok) {
+                    setUsers((prev) =>
+                      prev.map((u) =>
+                        u.id === user.id ? { ...u, verified: true } : u,
+                      ),
+                    );
+                    toast.success('User verified successfully!');
+                  }
+                } finally {
+                  setUpdating(null);
+                }
+              }}
+            >
+              Verify
+            </Button>
+          ) : null;
+        },
+      },
     ],
-    [router, updating],
+    [ updating],
   );
 
   const table = useReactTable({
@@ -247,48 +285,7 @@ export default function ManageUsersPage() {
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-100 via-white to-blue-200 flex flex-col items-center py-10 px-4'>
       <div className='w-full max-w-7xl'>
-        {/* Professional header, consistent with dashboard */}
-        <div className='max-w-4xl mx-auto px-6 mb-8'>
-          <div className='flex items-center justify-between rounded-full bg-white px-6 py-3 shadow-sm'>
-            <div className='flex items-center space-x-3 cursor-pointer'>
-              <svg
-                className='h-8 w-8 text-blue-800'
-                fill='none'
-                stroke='currentColor'
-                strokeWidth='2'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'
-                />
-              </svg>
-              <h1 className='text-xl font-semibold text-gray-900'>
-                Manage Users & Admins
-              </h1>
-            </div>
-            <nav className='flex items-center space-x-8 text-sm font-medium text-gray-700'>
-              <button
-                onClick={() => router.push('/super-admin')}
-                className='hover:text-blue-600'
-              >
-                Barangays
-              </button>
-              <button
-                onClick={() => router.push('/super-admin/users')}
-                className='hover:text-blue-600 text-blue-800 underline underline-offset-4'
-              >
-                Users & Admins
-              </button>
-            </nav>
-            <div className='flex items-center space-x-3'>
-              <Button variant='outline'>
-                <span className='h-4 w-4'>☰</span>
-              </Button>
-            </div>
-          </div>
-        </div>
+        <SharedHeader />
         <div className='w-full max-w-7xl bg-white/90 rounded-2xl shadow-xl p-8 border border-blue-100'>
           {/* Table Header with Search and Filter Sheet */}
           <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4'>
