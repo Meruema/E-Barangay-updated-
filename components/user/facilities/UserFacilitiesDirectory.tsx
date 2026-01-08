@@ -97,7 +97,10 @@ export function FacilitiesDirectory({
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [selectedFacilityForRequest, setSelectedFacilityForRequest] =
     useState<any>(null);
-  const [requestReason, setRequestReason] = useState('');
+  // Remove reason, add Letter of Intent image upload
+  const [letterOfIntent, setLetterOfIntent] = useState<File | null>(null);
+  const [letterOfIntentUrl, setLetterOfIntentUrl] = useState<string>('');
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date(),
@@ -235,7 +238,6 @@ export function FacilitiesDirectory({
 
   const handleFacilityClick = (facility: any) => {
     setSelectedFacilityForRequest(facility);
-    setRequestReason('');
     setSelectedDate(new Date());
     setSelectedTimes([]);
     setRequestModalOpen(true);
@@ -269,9 +271,33 @@ export function FacilitiesDirectory({
       toast.error('Please select at least one time slot');
       return;
     }
+    if (!letterOfIntent) {
+      toast.error('Please upload a Letter of Intent image.');
+      return;
+    }
 
     setSubmitting(true);
+    setUploading(true);
     try {
+      // Upload Letter of Intent image
+      const formData = new FormData();
+      formData.append('file', letterOfIntent);
+      formData.append('type', 'letter_of_intent');
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok || !uploadData.url) {
+        toast.error(uploadData.error || 'Failed to upload Letter of Intent');
+        setUploading(false);
+        setSubmitting(false);
+        return;
+      }
+      setLetterOfIntentUrl(uploadData.url);
+      setUploading(false);
+
+      // Submit reservation with document URL
       const response = await fetch('/api/reservations', {
         method: 'POST',
         headers: {
@@ -282,12 +308,10 @@ export function FacilitiesDirectory({
           itemId: selectedFacilityForRequest.id,
           reservationDate: selectedDate.toISOString().split('T')[0],
           timeSlots: selectedTimes,
-          reason: requestReason,
+          letterOfIntentUrl: uploadData.url,
         }),
       });
-
       const data = await response.json();
-
       if (!response.ok) {
         if (response.status === 409) {
           toast.error(data.error || 'Some time slots are already booked');
@@ -296,20 +320,21 @@ export function FacilitiesDirectory({
         }
         return;
       }
-
       toast.success(
         `Reservation submitted! Wait for admin approval of ${selectedTimes.length} time slot${
-            selectedTimes.length > 1 ? 's' : ''
-          }.`,
+          selectedTimes.length > 1 ? 's' : ''
+        }.`,
       );
       setRequestModalOpen(false);
-      setRequestReason('');
+      setLetterOfIntent(null);
+      setLetterOfIntentUrl('');
       setSelectedTimes([]);
     } catch (error) {
       console.error('Failed to submit reservation:', error);
       toast.error('Failed to submit reservation');
     } finally {
       setSubmitting(false);
+      setUploading(false);
     }
   };
 
@@ -556,16 +581,28 @@ export function FacilitiesDirectory({
               </div>
             </div>
 
-            {/* Reason */}
-            <div>
-              <Label htmlFor='reason'>Reason for Request (Optional)</Label>
-              <Textarea
-                id='reason'
-                placeholder='Please provide details about your request...'
-                value={requestReason}
-                onChange={(e) => setRequestReason(e.target.value)}
-                rows={3}
+
+            {/* Letter of Intent Upload */}
+            <div className='mb-4'>
+              <Label htmlFor='letterOfIntent'>Letter of Intent (Image, required)</Label>
+              <Input
+                id='letterOfIntent'
+                type='file'
+                accept='image/png, image/jpeg, image/jpg'
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setLetterOfIntent(e.target.files[0]);
+                  }
+                }}
+                disabled={submitting || uploading}
               />
+              {letterOfIntent && (
+                <div className='mt-2'>
+                  <span className='text-xs text-muted-foreground'>
+                    Selected: {letterOfIntent.name}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Selected Info */}
@@ -592,11 +629,11 @@ export function FacilitiesDirectory({
             <Button
               onClick={handleSubmitRequest}
               disabled={
-                submitting || !selectedDate || selectedTimes.length === 0
+                submitting || uploading || !selectedDate || selectedTimes.length === 0 || !letterOfIntent
               }
               className='bg-blue-600 hover:bg-blue-700'
             >
-              {submitting
+              {submitting || uploading
                 ? 'Submitting...'
                 : `Book ${
                     selectedTimes.length > 0

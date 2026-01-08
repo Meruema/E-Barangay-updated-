@@ -48,13 +48,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { userId, itemId, reservationDate, timeSlots, reason } = body;
+      const { letterOfIntentUrl } = body;
 
     if (
       !userId ||
       !itemId ||
       !reservationDate ||
       !timeSlots ||
-      timeSlots.length === 0
+      timeSlots.length === 0 ||
+      !letterOfIntentUrl
     ) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -110,6 +112,7 @@ export async function POST(request: NextRequest) {
         reservationDate: new Date(reservationDate),
         timeSlots,
         reason,
+          letterOfIntentUrl,
         status: 'pending',
       },
       include: {

@@ -341,8 +341,7 @@ export function MainDashboard({
                   </h2>
                 </div>
                 <div className='space-y-3'>
-                  {requests.filter((r) => r.status === 'pending').length ===
-                  0 ? (
+                  {requests.filter((r) => r.status === 'pending').length === 0 ? (
                     <Card>
                       <CardContent className='py-8 text-center text-muted-foreground'>
                         No pending requests
@@ -367,9 +366,7 @@ export function MainDashboard({
                                   </h3>
                                 </div>
                                 <p className='text-sm text-muted-foreground mb-2'>
-                                  {new Date(
-                                    request.submittedAt,
-                                  ).toLocaleDateString()}
+                                  {new Date(request.submittedAt).toLocaleDateString()}
                                 </p>
                                 {request.reason && (
                                   <p className='text-sm text-muted-foreground line-clamp-2'>
@@ -385,17 +382,68 @@ export function MainDashboard({
                                 <Button
                                   size='sm'
                                   variant='outline'
-                                  onClick={() =>
-                                    handleCancelRequest(request.id)
-                                  }
+                                  onClick={() => handleCancelRequest(request.id)}
                                   disabled={cancellingId === request.id}
                                   className='text-red-600 hover:text-red-700 hover:bg-red-50'
                                 >
                                   <XCircle className='h-4 w-4 mr-1' />
-                                  {cancellingId === request.id
-                                    ? 'Cancelling...'
-                                    : 'Cancel'}
+                                  {cancellingId === request.id ? 'Cancelling...' : 'Cancel'}
                                 </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                  )}
+                </div>
+              </div>
+
+              {/* Pending Reservations */}
+              <div className='bg-blue-50 p-6 rounded-lg'>
+                <div className='flex items-center justify-between mb-6'>
+                  <h2 className='text-2xl font-semibold text-blue-800'>
+                    Pending Reservations
+                  </h2>
+                </div>
+                <div className='space-y-3'>
+                  {facilities.filter((f) => f.status === 'pending').length === 0 ? (
+                    <Card>
+                      <CardContent className='py-8 text-center text-muted-foreground'>
+                        No pending reservations
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    facilities
+                      .filter((f) => f.status === 'pending')
+                      .slice(0, 5)
+                      .map((reservation) => (
+                        <Card
+                          key={reservation.id}
+                          className='hover:shadow-md transition-shadow'
+                        >
+                          <CardContent className='p-4'>
+                            <div className='flex items-start justify-between gap-4'>
+                              <div className='flex-1'>
+                                <div className='flex items-center gap-2 mb-1'>
+                                  <Clock className='h-4 w-4 text-blue-600' />
+                                  <h3 className='font-semibold text-base'>
+                                    {reservation.name || reservation.facilityName || 'Unknown Facility'}
+                                  </h3>
+                                </div>
+                                <p className='text-sm text-muted-foreground mb-2'>
+                                  {reservation.date ? new Date(reservation.date).toLocaleDateString() : ''}
+                                </p>
+                                {reservation.reason && (
+                                  <p className='text-sm text-muted-foreground line-clamp-2'>
+                                    <span className='font-medium'>Reason:</span>{' '}
+                                    {reservation.reason}
+                                  </p>
+                                )}
+                              </div>
+                              <div className='flex flex-col items-end gap-2'>
+                                <Badge className='bg-blue-100 text-blue-800 border-blue-200'>
+                                  Pending
+                                </Badge>
                               </div>
                             </div>
                           </CardContent>

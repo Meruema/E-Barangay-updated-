@@ -135,6 +135,7 @@ model Reservation {
   approvedBy      String?           @map("approved_by") @db.Uuid
   approvedAt      DateTime?         @map("approved_at") @db.Timestamptz(6)
   rejectionReason String?           @map("rejection_reason")
+  letterOfIntentUrl String?         @map("letter_of_intent_url")
   createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)

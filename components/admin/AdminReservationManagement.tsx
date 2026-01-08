@@ -313,10 +313,16 @@ export function AdminReservationManagement() {
                                   </Badge>
                                 ))}
                               </div>
-                              {reservation.reason && (
-                                <p className='text-sm text-muted-foreground mt-2 line-clamp-2'>
-                                  {reservation.reason}
-                                </p>
+                              {/* See Document Button for Letter of Intent */}
+                              {reservation.letterOfIntentUrl && (
+                                <Button
+                                  size='sm'
+                                  variant='secondary'
+                                  className='mt-2'
+                                  onClick={() => window.open(reservation.letterOfIntentUrl, '_blank')}
+                                >
+                                  See Document
+                                </Button>
                               )}
                             </div>
                             <div className='flex gap-2 flex-shrink-0'>
