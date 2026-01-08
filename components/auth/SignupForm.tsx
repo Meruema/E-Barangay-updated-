@@ -379,7 +379,10 @@ export function SignupForm({
           {step === 3 && (
             <>
               <div className='space-y-2'>
-                <Label htmlFor='idFile'>Upload Valid ID / If Student, please attach a photocopy of School ID with 3 signatures</Label>
+                <Label htmlFor='idFile'>
+                  Upload Valid ID / If Student, please attache photocopy of
+                  School ID with 3 signatures
+                </Label>
                 <Input
                   id='idFile'
                   type='file'
