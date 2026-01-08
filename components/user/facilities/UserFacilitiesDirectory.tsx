@@ -9,6 +9,8 @@ import { Textarea } from '../../ui/textarea';
 import { Label } from '../../ui/label';
 import { Calendar } from '../../ui/calendar';
 import { ScrollArea } from '../../ui/scroll-area';
+import { FileCheck2, AlertTriangle, CalendarClock } from 'lucide-react'
+
 import {
   Dialog,
   DialogContent,
@@ -398,19 +400,67 @@ export function FacilitiesDirectory({
         <SharedHeader />
 
         <main className='max-w-7xl mx-auto px-4 py-8'>
-          {/* MAP VIEW */}
-          <h2 className='text-2xl mb-4 flex items-center font-semibold justify-center'>
-            {' '}
-            Barangay Facilities
-          </h2>
+          {/* TOP */}
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-12 items-center p-8 md:p-12">
+            {/* Left Side - Title + Description */}
+            <div>
+              <h2 className="text-4xl font-bold text-gray-900 leading-tight">
+                Facilities - Booking Rules
+              </h2>
+              <p className="mt-4 text-lg text-gray-600">
+                Please read and understand the rules before reserving any barangay
+                facility.
+              </p>
+            </div>
+
+            {/* Divider */}
+            <div className="hidden md:block h-full w-px bg-[repeating-linear-gradient(180deg,transparent,transparent_4px,currentColor_4px,currentColor_10px)] [mask-image:linear-gradient(180deg,transparent,black_25%,black_75%,transparent)]" />
+
+            {/* Right Side - Rules */}
+            <div className="space-y-6">
+              <div className="flex items-start space-x-4">
+                <FileCheck2 className="font-semibold text-blue-800" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">
+                    Final Reservation
+                  </h3>
+                  <p className="text-gray-600 text-sm">
+                    Once you click <strong>“Book Reservation”</strong> and submit, the
+                    reservation <strong>cannot be canceled</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <AlertTriangle className="font-semibold text-blue-800" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">
+                    No Show Policy
+                  </h3>
+                  <p className="text-gray-600 text-sm">
+                    Failure to show up on your scheduled reservation will result in
+                    <strong> account suspension</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <CalendarClock className="font-semibold text-blue-800" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">
+                    Advance Booking & Payment
+                  </h3>
+                  <p className="text-gray-600 text-sm">
+                    Reservations must be made at least <strong>1-3 days in advance</strong>.
+                    Payment must be done <strong>in person</strong> at the barangay office.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* FACILITIES - Search Box */}
           <div>
-            <div className='flex items-center justify-between mb-6'>
-              <h2 className='text-xl font-semibold'>
-                All Facilities ({filteredServices.length})
-              </h2>
-            </div>
             {/* Search + Category */}
             <div className='flex items-center gap-4 mb-6'>
               {/* Search */}

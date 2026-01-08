@@ -284,8 +284,10 @@ export default function ManageUsersPage() {
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-100 via-white to-blue-200 flex flex-col items-center py-10 px-4'>
-      <div className='w-full max-w-7xl'>
+      <div className='w-full max-w-7xl '>
+        <div className='mb-6'>
         <SharedHeader />
+        </div>
         <div className='w-full max-w-7xl bg-white/90 rounded-2xl shadow-xl p-8 border border-blue-100'>
           {/* Table Header with Search and Filter Sheet */}
           <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4'>

@@ -157,7 +157,9 @@ export default function SuperAdminPage() {
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-100 via-white to-blue-200 flex flex-col items-center justify-start py-10 px-4'>
       <div className='w-full max-w-4xl'>
-        <SharedHeader />
+        <div className='mb-6'>
+          <SharedHeader />
+        </div>
         <div className='bg-white/80 rounded-xl shadow-lg p-6 border border-blue-50'>
           <h2 className='text-2xl font-bold text-blue-800 mb-4 flex items-center gap-2'>
             <svg

@@ -300,22 +300,14 @@ export default function AdminVerifyUsersPage() {
                                   <span className='font-semibold'>
                                     Valid ID:
                                   </span>{' '}
-                                  {user.idUrl.endsWith('.pdf') ? (
-                                    <a
-                                      href={user.idUrl}
-                                      target='_blank'
-                                      rel='noopener noreferrer'
-                                      className='text-blue-600 underline'
-                                    >
-                                      View PDF
-                                    </a>
-                                  ) : (
-                                    <img
-                                      src={user.idUrl}
-                                      alt='Valid ID'
-                                      className='max-h-40 rounded border shadow mt-2'
-                                    />
-                                  )}
+                                  <a
+                                    href={user.idUrl}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    className='text-blue-600 underline'
+                                  >
+                                    View Document
+                                  </a>
                                 </div>
                               )}
                               {user.addressUrl && (
@@ -323,22 +315,14 @@ export default function AdminVerifyUsersPage() {
                                   <span className='font-semibold'>
                                     Proof of Address:
                                   </span>{' '}
-                                  {user.addressUrl.endsWith('.pdf') ? (
-                                    <a
-                                      href={user.addressUrl}
-                                      target='_blank'
-                                      rel='noopener noreferrer'
-                                      className='text-blue-600 underline'
-                                    >
-                                      View PDF
-                                    </a>
-                                  ) : (
-                                    <img
-                                      src={user.addressUrl}
-                                      alt='Proof of Address'
-                                      className='max-h-40 rounded border shadow mt-2'
-                                    />
-                                  )}
+                                  <a
+                                    href={user.addressUrl}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    className='text-blue-600 underline'
+                                  >
+                                    View Document
+                                  </a>
                                 </div>
                               )}
                             </div>
