@@ -229,55 +229,6 @@ export default function ManageUsersPage() {
           );
         },
       },
-      {
-        id: 'actions',
-        header: 'Actions',
-        cell: ({ row }) => {
-          const user = row.original;
-          const canVerify = user.role === 'USER' && !user.verified;
-          return (
-            <div className='flex gap-2'>
-              <Button
-                size='sm'
-                className='bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200 hover:text-blue-900 transition'
-                onClick={() => router.push(`/super-admin/users/${user.id}`)}
-              >
-                Edit
-              </Button>
-              {canVerify && (
-                <Button
-                  size='sm'
-                  variant='outline'
-                  className='border-green-400 text-green-700 hover:bg-green-100 hover:text-green-900 transition'
-                  disabled={updating === user.id.toString()}
-                  onClick={async () => {
-                    setUpdating(user.id.toString());
-                    try {
-                      const res = await fetch('/api/users', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: user.id, verified: true }),
-                      });
-                      if (res.ok) {
-                        setUsers((prev) =>
-                          prev.map((u) =>
-                            u.id === user.id ? { ...u, verified: true } : u,
-                          ),
-                        );
-                        toast.success('User verified successfully!');
-                      }
-                    } finally {
-                      setUpdating(null);
-                    }
-                  }}
-                >
-                  Verify
-                </Button>
-              )}
-            </div>
-          );
-        },
-      },
     ],
     [router, updating],
   );
@@ -295,7 +246,7 @@ export default function ManageUsersPage() {
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-100 via-white to-blue-200 flex flex-col items-center py-10 px-4'>
-      <div className='w-full max-w-4xl'>
+      <div className='w-full max-w-7xl'>
         {/* Professional header, consistent with dashboard */}
         <div className='max-w-4xl mx-auto px-6 mb-8'>
           <div className='flex items-center justify-between rounded-full bg-white px-6 py-3 shadow-sm'>
@@ -338,7 +289,7 @@ export default function ManageUsersPage() {
             </div>
           </div>
         </div>
-        <div className='w-full max-w-3xl bg-white/90 rounded-2xl shadow-xl p-8 border border-blue-100'>
+        <div className='w-full max-w-7xl bg-white/90 rounded-2xl shadow-xl p-8 border border-blue-100'>
           {/* Table Header with Search and Filter Sheet */}
           <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4'>
             <div className='flex-1'>

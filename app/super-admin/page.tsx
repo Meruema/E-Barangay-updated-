@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useRouterWithProgress } from '@/lib/hooks/useRouterWithProgress';
-import { Landmark, Menu } from 'lucide-react';
+import { SharedHeader } from '@/components/SharedHeader';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -52,7 +51,7 @@ export default function SuperAdminPage() {
   });
   const [editLoading, setEditLoading] = useState(false);
   const [removeLoading, setRemoveLoading] = useState(false);
-  const router = useRouterWithProgress();
+  // const router = useRouterWithProgress();
 
   useEffect(() => {
     async function fetchBarangays() {
@@ -158,36 +157,7 @@ export default function SuperAdminPage() {
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-100 via-white to-blue-200 flex flex-col items-center justify-start py-10 px-4'>
       <div className='w-full max-w-4xl'>
-        {/* Copied AdminHeader style */}
-        <div className='max-w-4xl mx-auto px-6 mb-8'>
-          <div className='flex items-center justify-between rounded-full bg-white px-6 py-3 shadow-sm'>
-            <div className='flex items-center space-x-3 cursor-pointer'>
-              <Landmark className='h-8 w-8 text-blue-800' />
-              <h1 className='text-xl font-semibold text-gray-900'>
-                E-Barangay Super Admin
-              </h1>
-            </div>
-            <nav className='flex items-center space-x-8 text-sm font-medium text-gray-700'>
-              <button
-                onClick={() => router.push('/super-admin')}
-                className='hover:text-blue-600'
-              >
-                Barangays
-              </button>
-              <button
-                onClick={() => router.push('/super-admin/users')}
-                className='hover:text-blue-600'
-              >
-                Users & Admins
-              </button>
-            </nav>
-            <div className='flex items-center space-x-3'>
-              <Button variant='outline'>
-                <Menu className='h-4 w-4' />
-              </Button>
-            </div>
-          </div>
-        </div>
+        <SharedHeader />
         <div className='bg-white/80 rounded-xl shadow-lg p-6 border border-blue-50'>
           <h2 className='text-2xl font-bold text-blue-800 mb-4 flex items-center gap-2'>
             <svg

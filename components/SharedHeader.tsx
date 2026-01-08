@@ -105,18 +105,9 @@ export function SharedHeader() {
                   : ''
               }`}
             >
-              Users
+              Admins
             </button>
-            <button
-              onClick={() => router.push('/super-admin/barangays')}
-              className={`hover:text-blue-600 transition-colors ${
-                pathname?.startsWith('/super-admin/barangays')
-                  ? 'text-blue-600 font-semibold'
-                  : ''
-              }`}
-            >
-              Barangays
-            </button>
+
           </nav>
         );
 
